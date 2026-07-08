@@ -22,6 +22,7 @@ def extract_html(content: bytes, url: str | None = None) -> ExtractedHtml:
         include_comments=False,
         include_tables=True,
         favor_recall=True,
+        as_dict=True,
     )
     if result is None:
         return ExtractedHtml(text="", title=None)

@@ -47,6 +47,9 @@ dependencies = [
   "datasketch>=1.6",
 ]
 
+[project.scripts]
+cranus = "cranus.cli:app"
+
 [project.optional-dependencies]
 dev = [
   "pytest>=8.3",
