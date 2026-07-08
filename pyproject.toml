@@ -1,0 +1,68 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "cranus"
+version = "0.1.0"
+description = "Lawful OSINT + AI research platform: hybrid RAG + knowledge graph over public/licensed/consented sources."
+requires-python = ">=3.12,<3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.32",
+  "pydantic>=2.9",
+  "pydantic-settings>=2.6",
+  "sqlalchemy>=2.0.36",
+  "asyncpg>=0.30",
+  "psycopg[binary]>=3.2",
+  "alembic>=1.14",
+  "pgvector>=0.3.6",
+  "neo4j>=5.26",
+  "httpx>=0.27",
+  "tenacity>=9.0",
+  "trafilatura>=1.12",
+  "pypdf>=5.1",
+  "pdf2image>=1.17",
+  "pytesseract>=0.3.13",
+  "ftfy>=6.3",
+  "langdetect>=1.0.9",
+  "filetype>=1.2",
+  "spacy>=3.8",
+  "rapidfuzz>=3.10",
+  "jellyfish>=1.1",
+  "networkx>=3.4",
+  "sentence-transformers>=3.3",
+  "tiktoken>=0.8",
+  "anthropic>=0.40",
+  "slowapi>=0.1.9",
+  "prometheus-fastapi-instrumentator>=7.0",
+  "opentelemetry-sdk>=1.28",
+  "opentelemetry-instrumentation-fastapi>=0.49b0",
+  "structlog>=24.4",
+  "typer>=0.13",
+  "apscheduler>=3.10",
+  "boto3>=1.35",
+  "python-multipart>=0.0.17",
+  "argon2-cffi>=23.1",
+  "datasketch>=1.6",
+]
+
+[project.optional-dependencies]
+dev = [
+  "pytest>=8.3",
+  "pytest-asyncio>=0.24",
+  "respx>=0.22",
+  "testcontainers[postgres]>=4.9",
+  "ruff>=0.8",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/cranus"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+asyncio_mode = "auto"
+
+[tool.ruff]
+line-length = 100
+src = ["src"]
