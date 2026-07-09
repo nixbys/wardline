@@ -28,8 +28,10 @@ class SubQuestion:
 class LLMClient(Protocol):
     def decompose(self, question: str) -> list[SubQuestion]: ...
     def synthesize(self, question: str, sources: list[dict]) -> str: ...
-    def chat(self, system: str, messages: list[dict]) -> str:
-        """Single-turn-or-more raw chat call, used by the agent loop."""
+    def next_action(self, question: str, history: list[dict]) -> dict:
+        """Agent loop (report 5.8): given the question and prior
+        {tool, args, result} steps, return the next {"tool": ..., "args": ...}
+        to take. Tool set: search_text | graph_lookup | resolve_entity | finish."""
 
 
 # Relationship-style keywords route to "both" (text + graph) even in mock mode,
@@ -68,9 +70,28 @@ class MockLLMClient:
             sentences.append(f"{snippet} [{src['id']}].")
         return " ".join(sentences)
 
-    def chat(self, system: str, messages: list[dict]) -> str:
-        last_user = next((m["content"] for m in reversed(messages) if m["role"] == "user"), "")
-        return f'{{"tool": "finish", "args": {{"answer": "mock response to: {last_user[:80]}", "citations": []}}}}'
+    def next_action(self, question: str, history: list[dict]) -> dict:
+        # A real, if scripted, multi-step trajectory: search text first, then
+        # check the graph, then finish citing whatever was actually gathered —
+        # not a canned string, so the loop's budget/dedup/citation-enforcement
+        # logic gets genuinely exercised.
+        if len(history) == 0:
+            return {"tool": "search_text", "args": {"query": question, "k": 8}}
+        if len(history) == 1:
+            return {"tool": "graph_lookup", "args": {"entity": question, "hops": 1}}
+
+        gathered: list[dict] = []
+        for step in history:
+            result = step.get("result")
+            items = result if isinstance(result, list) else [result]
+            for item in items:
+                if isinstance(item, dict) and item.get("id"):
+                    gathered.append(item)
+
+        if not gathered:
+            return {"tool": "finish", "args": {"answer": "", "citations": []}}
+        answer = self.synthesize(question, gathered[:5])
+        return {"tool": "finish", "args": {"answer": answer, "citations": [g["id"] for g in gathered[:5]]}}
 
 
 class AnthropicLLMClient:
@@ -111,13 +132,23 @@ class AnthropicLLMClient:
             return "The model declined to answer this question."
         return next((b.text for b in response.content if b.type == "text"), "")
 
-    def chat(self, system: str, messages: list[dict]) -> str:
+    def next_action(self, question: str, history: list[dict]) -> dict:
+        from cranus.agent.prompts import AGENT_SYSTEM_PROMPT, build_agent_user_message
+
         response = self._client.messages.create(
-            model=self._model, max_tokens=2048, system=system, messages=messages
+            model=self._model,
+            max_tokens=1024,
+            system=AGENT_SYSTEM_PROMPT,
+            messages=[{"role": "user", "content": build_agent_user_message(question, history)}],
         )
         if response.stop_reason == "refusal":
-            return '{"tool": "finish", "args": {"answer": "declined", "citations": []}}'
-        return next((b.text for b in response.content if b.type == "text"), "")
+            return {"tool": "finish", "args": {"answer": "The model declined to answer.", "citations": []}}
+        text = next((b.text for b in response.content if b.type == "text"), "{}")
+        try:
+            return json.loads(_strip_code_fence(text))
+        except json.JSONDecodeError as exc:
+            logger.error("llm.next_action_parse_failed", error=str(exc), raw=text[:500])
+            return {"tool": "finish", "args": {"answer": "", "citations": []}}
 
 
 def _strip_code_fence(text: str) -> str:

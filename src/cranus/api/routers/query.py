@@ -11,6 +11,7 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
+from cranus.agent.loop import run_agent
 from cranus.api.deps import get_current_user_active, get_db
 from cranus.common.config import get_settings
 from cranus.common.schemas import QueryRequest, QueryResponse
@@ -29,12 +30,17 @@ def run_query(
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_active),
 ) -> QueryResponse:
-    result = answer(
-        db,
-        user=user,
-        question=body.question,
-        mode=body.mode,
-        filters=body.filters,
-        max_sources=body.max_sources,
-    )
+    if body.mode == "research":
+        result = run_agent(
+            db, user=user, question=body.question, filters=body.filters, max_sources=body.max_sources
+        )
+    else:
+        result = answer(
+            db,
+            user=user,
+            question=body.question,
+            mode=body.mode,
+            filters=body.filters,
+            max_sources=body.max_sources,
+        )
     return QueryResponse(**result)
