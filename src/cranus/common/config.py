@@ -67,6 +67,7 @@ class Settings(BaseSettings):
     crawler_max_pages_per_run: int = 200
     crawler_per_domain_delay_seconds: float = 1.0
     sec_edgar_user_agent: str = "cranus-research-bot contact@example.com"
+    opencorporates_api_token: str | None = None
 
     # --- Governance / security ---
     api_key_pepper: str = Field(

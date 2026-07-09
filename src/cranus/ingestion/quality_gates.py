@@ -13,6 +13,8 @@ KNOWN_LICENSES = {
     "user-uploaded",
     "open-web-crawled",
     "public-archive-snapshot",
+    "CC0-1.0",
+    "odbl-opencorporates",
     "gov-open-data-v1",
     "internal-only",
 }

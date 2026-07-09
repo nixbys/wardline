@@ -6,6 +6,7 @@ from cranus.storage.models.base import Base
 from cranus.storage.models.chunks import Chunk
 from cranus.storage.models.documents import Document
 from cranus.storage.models.edges import Edge
+from cranus.storage.models.engagements import Engagement
 from cranus.storage.models.entities import Entity
 from cranus.storage.models.entity_resolution import (
     EdgeCandidate,
@@ -21,6 +22,7 @@ __all__ = [
     "Chunk",
     "Document",
     "Edge",
+    "Engagement",
     "Entity",
     "EntityMention",
     "EdgeCandidate",

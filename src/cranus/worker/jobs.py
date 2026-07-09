@@ -42,12 +42,13 @@ def claim_next_job() -> IngestionJob | None:
 
 
 def run_job(job: IngestionJob) -> None:
+    from cranus.connectors.config import resolve_connector_config
     from cranus.connectors.registry import get_connector
     from cranus.ingestion.pipeline import run_connector_job
 
     logger.info("job.start", job_id=job.id, connector=job.connector_name)
     try:
-        connector = get_connector(job.connector_name)
+        connector = get_connector(job.connector_name, config=resolve_connector_config(job.connector_name))
         result = run_connector_job(connector, job.params)
         _finish(job.id, status="succeeded", result=result)
         logger.info("job.succeeded", job_id=job.id, result=result)

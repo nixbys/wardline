@@ -68,6 +68,14 @@ class Connector(ABC):
 
     name: str
     default_license: str
+    # Dual-use, target-lookup connectors (asset-exposure search engines,
+    # breach-check APIs, aggregator tools) set this True; the admin
+    # connector-run route then requires an active Engagement scoping the
+    # requested target before the job is even queued (governance/pep.py:
+    # enforce_engagement_scope). Public-corpus connectors (Wikipedia, SEC
+    # EDGAR, archive.org, the crawler) leave this False — there's no
+    # specific "target" being investigated, just a source being ingested.
+    requires_engagement: bool = False
 
     def __init__(self, config: dict | None = None):
         self.config = config or {}
