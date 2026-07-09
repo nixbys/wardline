@@ -29,15 +29,17 @@ Seven planes, matching the source report's design:
 Requires Docker (or Podman with the `docker-compose` external provider) and network access.
 
 ```bash
-cp .env.example .env          # edit API_KEY_PEPPER at minimum before any real deployment
+cp .env.example .env
+./scripts/generate_secrets.sh    # prints API_KEY_PEPPER/POSTGRES_PASSWORD/NEO4J_PASSWORD/S3_SECRET_KEY —
+                                  # paste the values into .env (or a real secrets manager, see below)
 docker compose -f docker/docker-compose.yml up -d
 docker compose -f docker/docker-compose.yml run --rm api python -m alembic upgrade head   # if not run automatically
 docker compose -f docker/docker-compose.yml run --rm api python -m cranus.cli create-admin-user you@example.com
 ```
 
-The last command prints an API key **once** — save it. Every API call other than `/healthz`/`/readyz` requires it.
+The last command prints an API key **once** — save it. Every API call other than `/healthz`/`/readyz` requires it (unless `AUTH_MODE=oidc`, see [Production readiness](#production-readiness)).
 
-By default, Postgres/Neo4j/MinIO's host ports are bound to `127.0.0.1` only (not `0.0.0.0`) — reachable from your machine for local `psql`/browser debugging, not from the network if this is ever run on a networked host. Only the `api` service's port (8000) is published broadly, and even that should sit behind a TLS-terminating reverse proxy in any real deployment (see [Production readiness](#production-readiness)).
+By default, Postgres/Neo4j/MinIO's host ports are bound to `127.0.0.1` only (not `0.0.0.0`) — reachable from your machine for local `psql`/browser debugging, not from the network if this is ever run on a networked host. The `caddy` service (see [Production readiness](#production-readiness)) TLS-terminates on 8080/8443 by default (rootless Docker/Podman can't bind 80/443 without a host-level capability grant — set `HTTP_PORT`/`HTTPS_PORT` in `.env` to use the standard ports on a root-daemon host) and reverse-proxies to `api:8000`; `api`'s own port stays published too for local-dev continuity with the plain-HTTP examples below.
 
 ## How to use it
 
@@ -194,24 +196,15 @@ Integration tests against real Postgres/Neo4j via `testcontainers-python` are th
 
 ## Production readiness
 
-This is a lean single-node build (see "Scope reductions" below) with a genuine hardening pass, not a fully production-hardened deployment. What's covered vs. what's still your responsibility before running this with real data or real users:
+This is a lean single-node build (see "Scope reductions" below). Every item below is now actually implemented, not just documented as a gap — but each still needs *your* infrastructure/configuration to be real production-grade, since none of that (a real domain, a real IdP, a real secrets manager, a real off-host backup target) can be conjured up by this repo on its own.
 
-**Already in place:**
-- Non-root users in both container images (`docker/Dockerfile.api`, `docker/Dockerfile.worker`).
-- `.dockerignore` keeps `.env`, `.git`, and local caches out of the build context.
-- Postgres/Neo4j/MinIO host ports bound to `127.0.0.1` only; only `api` (8000) is broadly published.
-- Security response headers (`X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Cache-Control: no-store`) on every response.
-- `debug=False` set explicitly on the FastAPI app, plus a catch-all exception handler that logs full detail server-side (structured, via `structlog`) but returns only a generic message to clients — no stack traces leak over the wire.
-- Bounded-read upload size limit (`UPLOAD_MAX_BYTES`), immutable audit log, RBAC/ABAC, per-key rate limiting (`slowapi`), argon2-hashed API keys.
-
-**Still your responsibility before real production use:**
-- **Secrets**: `API_KEY_PEPPER` and the Postgres/Neo4j/MinIO credentials in `docker-compose.yml`/`.env` are dev-grade defaults. Rotate all of them and pull from a real secrets manager (Vault, AWS/GCP secret manager, etc.), not `.env` files on disk.
-- **TLS**: uvicorn is served plaintext on 8000. Put a TLS-terminating reverse proxy (nginx, Caddy, an ALB) in front before exposing this beyond localhost.
-- **Enterprise IAM**: bearer API keys are the whole auth model here. Swap for a real IdP (OIDC/SAML) and MFA before onboarding real users, per the report's own recommendation.
-- **Dependency pinning**: `pyproject.toml` uses floating minimum versions (`>=`), no lockfile. Generate and commit one (`pip freeze`, or migrate to `uv`/`poetry`) before treating builds as reproducible.
-- **Backups**: no backup/restore strategy is defined for the `pgdata`/`neo4j_data`/`minio_data` volumes. Add one before storing anything you can't afford to lose.
-- **Resource limits**: `docker-compose.yml` has no CPU/memory limits on any service — add them (`deploy.resources` or `mem_limit`/`cpus`) before running alongside other workloads.
-- **Observability**: OTel is console-exporter-only by default (`OTEL_EXPORTER_OTLP_ENDPOINT` unset). Point it at a real collector before relying on it for incident response.
+- **Secrets**: `Settings` (`common/config.py`) reads `secrets_dir="/run/secrets"` when that path exists — mount a Docker secret, Kubernetes Secret volume, or Vault-agent-rendered file there (named after the field, e.g. `/run/secrets/api_key_pepper`) and it wins over the plain env var. `scripts/generate_secrets.sh` generates strong values for first-time setup. `docker-compose.yml`'s Postgres/Neo4j/MinIO credentials are now sourced from the same `.env` variables the app itself uses (`POSTGRES_PASSWORD`, `NEO4J_PASSWORD`, `S3_SECRET_KEY`) instead of being independently hardcoded, so there's one place to change a credential, not two that can drift. You still need to actually deploy a secrets manager and rotate the shipped dev defaults — this just means there's a real integration point once you do.
+- **TLS**: a `caddy` service reverse-proxies `api:8000` and terminates TLS, published on `HTTP_PORT`/`HTTPS_PORT` (default 8080/8443 — rootless Docker/Podman can't bind 80/443 without a host capability grant; set both to 80/443 in `.env` on a root-daemon host). Set `DOMAIN=yourhost.example.com` and point DNS at this host — Caddy automatically provisions and renews a real Let's Encrypt certificate, no other config change needed. Without `DOMAIN` set, it serves HTTPS on `localhost` using Caddy's own locally-trusted CA (fine for local testing; browsers/`curl` need `-k` or to trust that CA).
+- **Enterprise IAM**: set `AUTH_MODE=oidc` (+ `OIDC_ISSUER`, `OIDC_JWKS_URL`, optionally `OIDC_AUDIENCE`/`OIDC_ROLE_CLAIM`) to validate bearer tokens against any real OIDC-compliant IdP (Okta, Auth0, Keycloak, Entra ID) instead of this project's own API-key system — see `api/oidc_auth.py`/`api/deps.py`. A user record is created/kept in sync locally on first sight (for revocation and audit-log foreign keys), with the IdP as the source of truth for role assignment. **Not yet live-tested against a real IdP** — validated by code review and the JWT/JWKS-handling logic only, since no IdP is available in this dev environment.
+- **Dependency pinning**: `requirements-lock.txt` (generated via `pip freeze` inside the built image, see `scripts/regenerate_lockfile.sh`) pins every transitive dependency to an exact version. `pyproject.toml` keeps floating `>=` bounds for flexibility when adding new dependencies; the lockfile is what real deployments should actually install from for reproducible builds.
+- **Backups**: `scripts/backup.sh`/`scripts/restore.sh` dump Postgres (`pg_dump`, online), Neo4j (`neo4j-admin dump`, brief downtime — Community Edition has no hot-backup path), and MinIO (`mc mirror`) into `backups/<timestamp>/`. **Not exercised against a full stop/restore cycle this session** — reviewed for correctness, not live-run, since doing so against this environment's real ingested data risked actual data loss if something in the exact `neo4j-admin` CLI flags for this image version were wrong. Test a full backup→restore cycle in a disposable environment before relying on it. You still need to copy the output off-host — a backup on the same disk isn't a backup.
+- **Resource limits**: every `docker-compose.yml` service now sets `mem_limit`/`cpus` (api/worker: 2 GiB/2 CPU each, for the ML models loaded at runtime; neo4j: 2 GiB; postgres: 1 GiB; the rest smaller). These are starting points sized for a single small deployment — profile and adjust for your actual traffic/hardware.
+- **Observability**: `/metrics` (Prometheus, via `prometheus-fastapi-instrumentator`) and OpenTelemetry tracing (via `opentelemetry-instrumentation-fastapi`) are both wired into the app now, not just declared as dependencies. Traces print to console by default; set `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` to route through the bundled `otel-collector` compose service, and edit `docker/otel-collector-config.yaml` to add a real backend exporter (Honeycomb, Grafana Cloud, Datadog, etc.) — it only logs to its own stdout by default.
 
 ## Scope reductions vs. the source report
 
@@ -225,10 +218,9 @@ The report this was built from sketches a larger platform than a single build se
 | OpenSearch (true BM25) | Postgres `tsvector`/`ts_rank_cd` (BM25-*like*) | Avoids a second search engine; ParadeDB `pg_search` is the noted upgrade path |
 | Full ASR pipeline | Not implemented | No audio/video connectors in scope |
 | Cloud/commercial OCR | Local Tesseract | Adequate for typed/scanned filings, not handwriting |
-| Enterprise IAM (OIDC/MFA, Vault/KMS) | Bearer API keys + `.env` secrets | Single-node app — swap for a real IdP/KMS before real production use |
+| Enterprise IAM (OIDC/MFA, Vault/KMS) | Optional OIDC JWT auth mode (see Production readiness) alongside the default API-key system | OIDC path exists but isn't live-tested against a real IdP; MFA is the IdP's responsibility, not this app's |
 | Splink/Dedupe entity resolution | Homemade blocking (metaphone) + scoring (rapidfuzz/jaro-winkler) + clustering (connected components) | Splink is the noted upgrade path if accuracy needs to scale |
 | Dependency-parse relation extraction | Sentence-scoped keyword-trigger rules | Real, but coarser than true NLP relation extraction — produces some false positives (documented, not hidden) |
-| Pinned/locked dependencies | Floating `>=` minimum versions, no lockfile | Acceptable for active development; generate a lockfile before treating builds as reproducible |
 
 ## The legal boundary
 

@@ -17,7 +17,6 @@ from datetime import datetime
 from sqlalchemy import text
 from sqlalchemy.orm import Session
 
-from cranus.common.config import get_settings
 from cranus.common.logging import get_logger
 from cranus.governance import audit, pep
 from cranus.query import planner, understanding
@@ -78,7 +77,6 @@ def answer(
     filters: dict | None = None,
     max_sources: int = 12,
 ) -> dict:
-    settings = get_settings()
     filters = filters or {}
     start = time.monotonic()
     user_id = user.id

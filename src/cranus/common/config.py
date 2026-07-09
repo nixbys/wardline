@@ -3,26 +3,75 @@
 Every secret and tunable lives here so no module reaches into `os.environ`
 directly. Validated eagerly at process startup (see api/main.py, worker/main.py,
 cli.py) so misconfiguration fails fast instead of at first use.
+
+`secrets_dir` makes this compatible with Docker/Kubernetes secret mounts out
+of the box: pydantic-settings reads a file named after a field (e.g.
+`/run/secrets/api_key_pepper`) as that field's value, taking priority over
+plain environment variables. Point a secrets manager (Vault agent, K8s
+Secret volume, `docker secret`) at `/run/secrets` instead of shipping real
+credentials in a `.env` file on disk for any real deployment.
 """
 
 from __future__ import annotations
 
+import os
 from functools import lru_cache
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
+# Only set secrets_dir when it actually exists: pydantic-settings just skips
+# a missing directory with a warning, but there's no reason to pay even that
+# cost (or risk a future pydantic-settings version tightening this to an
+# error) in the common case of no secret-mount being present at all.
+_SECRETS_DIR = "/run/secrets" if os.path.isdir("/run/secrets") else None
+
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
+    model_config = SettingsConfigDict(
+        env_file=".env",
+        env_file_encoding="utf-8",
+        extra="ignore",
+        secrets_dir=_SECRETS_DIR,
+    )
 
     # --- App identity ---
     app_name: str = "cranus"
     environment: str = "development"
 
     # --- Postgres (app state + retrieval substrate) ---
-    database_url: str = "postgresql+psycopg://cranus:cranus@localhost:5432/cranus"
-    database_url_async: str = "postgresql+asyncpg://cranus:cranus@localhost:5432/cranus"
+    # Component fields are the source of truth so a single credential change
+    # (e.g. postgres_password) stays consistent between what the app connects
+    # with and what docker-compose.yml provisions the postgres container
+    # with — previously these were two independently-hardcoded values that
+    # could silently drift. Set database_url_override instead if you need a
+    # connection string component fields can't express (e.g. a managed
+    # Postgres with extra query params).
+    postgres_user: str = "cranus"
+    postgres_password: str = "cranus"
+    postgres_host: str = "postgres"
+    postgres_port: int = 5432
+    postgres_db: str = "cranus"
+    database_url_override: str | None = None
+    database_url_async_override: str | None = None
+
+    @property
+    def database_url(self) -> str:
+        if self.database_url_override:
+            return self.database_url_override
+        return (
+            f"postgresql+psycopg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
+
+    @property
+    def database_url_async(self) -> str:
+        if self.database_url_async_override:
+            return self.database_url_async_override
+        return (
+            f"postgresql+asyncpg://{self.postgres_user}:{self.postgres_password}"
+            f"@{self.postgres_host}:{self.postgres_port}/{self.postgres_db}"
+        )
 
     # --- Neo4j (knowledge graph) ---
     neo4j_uri: str = "bolt://localhost:7687"
@@ -78,6 +127,22 @@ class Settings(BaseSettings):
     rate_limit_query_per_minute: int = 30
     rate_limit_upload_per_minute: int = 10
     upload_max_bytes: int = 50 * 1024 * 1024  # 50 MiB
+
+    # --- Auth mode: bearer API keys (default) or OIDC JWT bearer tokens ---
+    # "api_key" is this project's own key system (governance/*, storage/models/governance.py).
+    # "oidc" validates a JWT against a real identity provider's JWKS endpoint instead — set this
+    # to move onto enterprise IAM (Okta/Auth0/Keycloak/Entra ID, anything OIDC-compliant) without
+    # code changes. See api/oidc_auth.py.
+    auth_mode: str = "api_key"  # "api_key" | "oidc"
+    oidc_issuer: str | None = None
+    oidc_jwks_url: str | None = None
+    oidc_audience: str | None = None
+    oidc_role_claim: str = "roles"
+    # Maps a role string found in oidc_role_claim to this app's internal roles
+    # (admin/analyst/viewer). Keys are matched case-insensitively.
+    oidc_role_map: dict[str, str] = Field(
+        default_factory=lambda: {"admin": "admin", "analyst": "analyst", "viewer": "viewer"}
+    )
 
     # --- Agent mode guardrails ---
     agent_max_steps: int = 6

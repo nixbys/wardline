@@ -1,0 +1,23 @@
+# Minimal collector config: receive OTLP, batch, print to the collector's
+# own stdout (`docker compose logs otel-collector`). Add a real exporter
+# (otlphttp, prometheusremotewrite, etc.) under `exporters:` and reference
+# it in the traces pipeline below to ship to a real backend.
+receivers:
+  otlp:
+    protocols:
+      grpc:
+        endpoint: 0.0.0.0:4317
+
+processors:
+  batch:
+
+exporters:
+  debug:
+    verbosity: basic
+
+service:
+  pipelines:
+    traces:
+      receivers: [otlp]
+      processors: [batch]
+      exporters: [debug]

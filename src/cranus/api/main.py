@@ -23,6 +23,7 @@ from cranus.api.routers import (
 )
 from cranus.common.config import get_settings
 from cranus.common.logging import configure_logging, get_logger
+from cranus.common.observability import configure_observability
 from cranus.governance.rate_limit import limiter
 
 logger = get_logger(__name__)
@@ -72,6 +73,7 @@ def create_app() -> FastAPI:
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
     app.add_middleware(SecurityHeadersMiddleware)
+    configure_observability(app, get_settings())
 
     @app.exception_handler(Exception)
     async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
