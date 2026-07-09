@@ -40,7 +40,7 @@ class Settings(BaseSettings):
 
     # --- LLM (Anthropic / Claude) ---
     anthropic_api_key: str | None = None
-    anthropic_model: str = "claude-sonnet-5"
+    anthropic_model: str = "claude-opus-4-8"
     llm_client_mode: str = "mock"  # "mock" | "live" — see query/llm_client.py
 
     # --- Embeddings / reranking (local, no paid API) ---

@@ -4,7 +4,7 @@ from contextlib import asynccontextmanager
 
 from fastapi import FastAPI
 
-from cranus.api.routers import health
+from cranus.api.routers import audit, feedback, health, query, session
 from cranus.common.config import get_settings
 from cranus.common.logging import configure_logging, get_logger
 
@@ -23,6 +23,10 @@ async def lifespan(app: FastAPI):
 def create_app() -> FastAPI:
     app = FastAPI(title="cranus", version="0.1.0", lifespan=lifespan)
     app.include_router(health.router)
+    app.include_router(query.router)
+    app.include_router(session.router)
+    app.include_router(audit.router)
+    app.include_router(feedback.router)
     return app
 
 
