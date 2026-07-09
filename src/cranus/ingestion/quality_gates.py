@@ -12,6 +12,7 @@ KNOWN_LICENSES = {
     "us-gov-open-data",
     "user-uploaded",
     "open-web-crawled",
+    "public-archive-snapshot",
     "gov-open-data-v1",
     "internal-only",
 }

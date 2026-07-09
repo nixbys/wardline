@@ -37,6 +37,8 @@ def run_connector(
 ) -> dict:
     connector = get_connector(name)  # raises KeyError -> 500 if unregistered; acceptable for v1
     register_source(db, name, connector.default_license, config_schema={})
+    db.flush()  # must land before the job insert: no relationship() links Source/IngestionJob
+    # for SQLAlchemy's unit-of-work to infer insert order from the raw FK alone
     job = IngestionJob(connector_name=name, params=body.params)
     db.add(job)
     db.flush()

@@ -33,7 +33,7 @@ def register_connector(name: str):
 
 def _load_builtin_connectors() -> None:
     # Import side effects register each module's @register_connector class.
-    from cranus.connectors import sec_edgar, upload, web_crawler, wikipedia  # noqa: F401
+    from cranus.connectors import archive_org, sec_edgar, upload, web_crawler, wikipedia  # noqa: F401
 
 
 def _load_entry_point_connectors() -> None:
