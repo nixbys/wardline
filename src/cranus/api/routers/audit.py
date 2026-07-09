@@ -9,8 +9,9 @@ from datetime import datetime
 from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
-from cranus.api.deps import get_db
+from cranus.api.deps import get_current_user, get_db
 from cranus.governance.audit import get_events
+from cranus.storage.models.governance import User
 
 router = APIRouter(prefix="/v1", tags=["audit"])
 
@@ -21,6 +22,7 @@ def list_audit_events(
     since: datetime | None = Query(default=None),
     limit: int = Query(default=200, le=1000),
     db: Session = Depends(get_db),
+    _caller: User = Depends(get_current_user),
 ) -> list[dict]:
     events = get_events(db, user_id=user, since=since, limit=limit)
     return [

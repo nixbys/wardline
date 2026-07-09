@@ -7,15 +7,18 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, HTTPException
 from sqlalchemy.orm import Session
 
-from cranus.api.deps import get_db
+from cranus.api.deps import get_current_user, get_db
 from cranus.common.schemas import QuerySession
 from cranus.governance.audit import get_session_events
+from cranus.storage.models.governance import User
 
 router = APIRouter(prefix="/v1", tags=["session"])
 
 
 @router.get("/session/{session_id}", response_model=QuerySession)
-def get_session(session_id: str, db: Session = Depends(get_db)) -> QuerySession:
+def get_session(
+    session_id: str, db: Session = Depends(get_db), _user: User = Depends(get_current_user)
+) -> QuerySession:
     events = get_session_events(db, session_id)
     if not events:
         raise HTTPException(status_code=404, detail="session not found")

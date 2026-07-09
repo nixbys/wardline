@@ -8,28 +8,33 @@ calls, neither of which belongs on the asyncio event loop.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends
+from fastapi import APIRouter, Depends, Request
 from sqlalchemy.orm import Session
 
-from cranus.api.deps import get_current_user_id, get_db
+from cranus.api.deps import get_current_user_active, get_db
+from cranus.common.config import get_settings
 from cranus.common.schemas import QueryRequest, QueryResponse
+from cranus.governance.rate_limit import limiter
 from cranus.query.pipeline import answer
+from cranus.storage.models.governance import User
 
 router = APIRouter(prefix="/v1", tags=["query"])
 
 
 @router.post("/query", response_model=QueryResponse)
+@limiter.limit(f"{get_settings().rate_limit_query_per_minute}/minute")
 def run_query(
-    request: QueryRequest,
+    request: Request,
+    body: QueryRequest,
     db: Session = Depends(get_db),
-    user_id: str | None = Depends(get_current_user_id),
+    user: User = Depends(get_current_user_active),
 ) -> QueryResponse:
     result = answer(
         db,
-        user_id=user_id,
-        question=request.question,
-        mode=request.mode,
-        filters=request.filters,
-        max_sources=request.max_sources,
+        user=user,
+        question=body.question,
+        mode=body.mode,
+        filters=body.filters,
+        max_sources=body.max_sources,
     )
     return QueryResponse(**result)

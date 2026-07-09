@@ -1,4 +1,4 @@
-"""Human-in-the-loop entity resolution review queue (report 4.5)."""
+"""Human-in-the-loop entity resolution review queue (report 4.5). Admin/analyst only."""
 
 from __future__ import annotations
 
@@ -6,11 +6,13 @@ from fastapi import APIRouter, Depends
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from cranus.api.deps import get_current_user_id, get_db
+from cranus.api.deps import get_db, require_role
 from cranus.graph.entity_resolution import review
 from cranus.storage.models.entities import Entity
+from cranus.storage.models.governance import ROLE_ADMIN, ROLE_ANALYST, User
 
 router = APIRouter(prefix="/v1/admin/entity-review", tags=["entity-review"])
+_reviewer_role = require_role(ROLE_ADMIN, ROLE_ANALYST)
 
 
 class ReviewDecision(BaseModel):
@@ -18,7 +20,7 @@ class ReviewDecision(BaseModel):
 
 
 @router.get("/queue")
-def list_queue(db: Session = Depends(get_db)) -> list[dict]:
+def list_queue(db: Session = Depends(get_db), _user: User = Depends(_reviewer_role)) -> list[dict]:
     pending = review.list_pending(db)
     out = []
     for r in pending:
@@ -41,7 +43,7 @@ def decide(
     review_id: str,
     body: ReviewDecision,
     db: Session = Depends(get_db),
-    user_id: str | None = Depends(get_current_user_id),
+    user: User = Depends(_reviewer_role),
 ) -> dict:
-    result = review.decide(db, review_id, body.decision, user_id)
+    result = review.decide(db, review_id, body.decision, user.id)
     return {"id": result.id, "status": result.status}

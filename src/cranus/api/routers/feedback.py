@@ -9,8 +9,9 @@ from pydantic import BaseModel
 
 from sqlalchemy.orm import Session
 
-from cranus.api.deps import get_current_user_id, get_db
+from cranus.api.deps import get_current_user, get_db
 from cranus.storage.models.feedback import Feedback
+from cranus.storage.models.governance import User
 
 router = APIRouter(prefix="/v1", tags=["feedback"])
 
@@ -25,10 +26,10 @@ class FeedbackRequest(BaseModel):
 def submit_feedback(
     request: FeedbackRequest,
     db: Session = Depends(get_db),
-    user_id: str | None = Depends(get_current_user_id),
+    user: User = Depends(get_current_user),
 ) -> dict:
     fb = Feedback(
-        session_id=request.session_id, user_id=user_id, rating=request.rating, comment=request.comment
+        session_id=request.session_id, user_id=user.id, rating=request.rating, comment=request.comment
     )
     db.add(fb)
     db.flush()

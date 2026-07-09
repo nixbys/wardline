@@ -19,7 +19,7 @@ from sqlalchemy.orm import Session
 
 from cranus.common.config import get_settings
 from cranus.common.logging import get_logger
-from cranus.governance import audit
+from cranus.governance import audit, pep
 from cranus.query import planner, understanding
 from cranus.query.llm_client import get_llm_client
 from cranus.query.render import watermark
@@ -29,6 +29,7 @@ from cranus.retrieval.fusion import FusedResult, rrf_merge
 from cranus.retrieval.lexical import lexical_search
 from cranus.retrieval.rerank import rerank
 from cranus.retrieval.vector import vector_search
+from cranus.storage.models.governance import User
 
 logger = get_logger(__name__)
 
@@ -71,7 +72,7 @@ def _fetch_source_metadata(db: Session, chunk_ids: list[str]) -> dict[str, dict]
 def answer(
     db: Session,
     *,
-    user_id: str | None,
+    user: User,
     question: str,
     mode: str = "auto",
     filters: dict | None = None,
@@ -80,6 +81,7 @@ def answer(
     settings = get_settings()
     filters = filters or {}
     start = time.monotonic()
+    user_id = user.id
 
     session_id = audit.open_session(db, user_id, question, mode)
 
@@ -122,6 +124,11 @@ def answer(
                 "kind": kind,
             }
         )
+
+    # ABAC, enforced right before the evidence is handed to the LLM (report
+    # 4.6): a viewer never sees internal-only sources, even ones retrieval
+    # itself surfaced.
+    sources_payload = pep.filter_sources_by_license(user, sources_payload)
 
     raw_answer = llm.synthesize(question, sources_payload)
     valid_ids = {s["id"] for s in sources_payload}
