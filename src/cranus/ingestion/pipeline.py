@@ -105,6 +105,11 @@ async def _run_connector_job_async(connector: Connector, params: dict) -> dict:
                 from cranus.retrieval.index import index_document
 
                 index_document(db, doc_id, text)
+            with sync_session() as db:
+                from cranus.graph.pipeline import process_document_for_graph
+
+                graph_stats = process_document_for_graph(db, doc_id)
+                logger.info("ingest.graph_processed", doc_id=doc_id, **graph_stats)
         else:
             stats["quarantined"] += 1
             logger.info("ingest.quarantined", doc_id=doc_id, reason=quality.reason)

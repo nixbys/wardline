@@ -65,12 +65,15 @@ class EntityResolutionReview(Base, TimestampMixin):
 
     __tablename__ = "entity_resolution_review"
 
+    # SET NULL, not CASCADE: a merge decision deletes the "drop" entity, and this
+    # row IS the audit record of that decision — cascading would delete the
+    # record of the merge at the exact moment the merge happens.
     id: Mapped[str] = mapped_column(String(64), primary_key=True, default=partial(new_id, "review"))
-    entity_a_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False
+    entity_a_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("entities.id", ondelete="SET NULL"), nullable=True
     )
-    entity_b_id: Mapped[str] = mapped_column(
-        String(64), ForeignKey("entities.id", ondelete="CASCADE"), nullable=False
+    entity_b_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("entities.id", ondelete="SET NULL"), nullable=True
     )
     score: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="pending")  # pending|merged|rejected

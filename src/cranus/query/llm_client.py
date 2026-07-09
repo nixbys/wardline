@@ -35,7 +35,7 @@ class LLMClient(Protocol):
 # Relationship-style keywords route to "both" (text + graph) even in mock mode,
 # so Phase 5's graph_lookup gets exercised without needing a live LLM.
 _RELATIONSHIP_HINTS = re.compile(
-    r"\b(founder?|co-?founded?|subsidiary|acquir|owns?|parent company|relationship|related to)\b",
+    r"\b(founders?|founded|co-?founded?|subsidiary|acquir|owns?|parent company|relationship|related to)\b",
     re.IGNORECASE,
 )
 
@@ -60,7 +60,12 @@ class MockLLMClient:
         for src in sources[:5]:
             snippet = src["text"].strip().replace("\n", " ")
             snippet = snippet[:220].rsplit(" ", 1)[0] if len(snippet) > 220 else snippet
-            sentences.append(f"{snippet}. [{src['id']}]")
+            snippet = snippet.rstrip(".")
+            # The citation bracket must sit *before* the sentence-ending period:
+            # verify.py splits sentences on `[.!?]\s+`, so "snippet. [id]" puts the
+            # split between "." and "[", shifting every citation onto the next
+            # sentence. "snippet [id]." keeps the id inside its own sentence.
+            sentences.append(f"{snippet} [{src['id']}].")
         return " ".join(sentences)
 
     def chat(self, system: str, messages: list[dict]) -> str:
