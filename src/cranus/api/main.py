@@ -2,10 +2,12 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse
 from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from starlette.middleware.base import BaseHTTPMiddleware
 
 from cranus.api.routers import (
     admin_connectors,
@@ -43,12 +45,44 @@ async def lifespan(app: FastAPI):
     logger.info("shutdown")
 
 
+class SecurityHeadersMiddleware(BaseHTTPMiddleware):
+    """Baseline response headers for an API with no browser-rendered pages of
+    its own: still worth setting so a browser hitting these endpoints
+    directly (e.g. an error page, a misconfigured proxy) doesn't sniff
+    content types or get framed/cached unexpectedly.
+    """
+
+    async def dispatch(self, request: Request, call_next):
+        response = await call_next(request)
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["Referrer-Policy"] = "no-referrer"
+        response.headers["Cache-Control"] = "no-store"
+        return response
+
+
 def create_app() -> FastAPI:
-    app = FastAPI(title="cranus", version="0.1.0", lifespan=lifespan)
+    # debug=False (the default) is load-bearing, not just an unset knob:
+    # Starlette's ServerErrorMiddleware only suppresses tracebacks from
+    # unhandled exceptions when debug is False. Set explicitly so it can't
+    # be silently flipped by a future FastAPI default change.
+    app = FastAPI(title="cranus", version="0.1.0", lifespan=lifespan, debug=False)
 
     app.state.limiter = limiter
     app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
     app.add_middleware(SlowAPIMiddleware)
+    app.add_middleware(SecurityHeadersMiddleware)
+
+    @app.exception_handler(Exception)
+    async def unhandled_exception_handler(request: Request, exc: Exception) -> JSONResponse:
+        logger.error(
+            "unhandled_exception",
+            path=request.url.path,
+            method=request.method,
+            error=str(exc),
+            exc_info=True,
+        )
+        return JSONResponse(status_code=500, content={"detail": "internal server error"})
 
     app.include_router(health.router)
     app.include_router(query.router)

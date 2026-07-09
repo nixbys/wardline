@@ -9,8 +9,12 @@ services:
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro
+    # Bound to localhost only: this port doesn't need to be reachable from
+    # the network on a real deployment host, only from other containers on
+    # the compose network (which this binding doesn't affect) and from the
+    # host machine itself for local psql/debugging.
     ports:
-      - "5432:5432"
+      - "127.0.0.1:5432:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U cranus -d cranus"]
       interval: 5s
@@ -26,9 +30,10 @@ services:
     volumes:
       - neo4j_data:/data
       - neo4j_logs:/logs
+    # See postgres comment above re: localhost-only binding.
     ports:
-      - "7474:7474"
-      - "7687:7687"
+      - "127.0.0.1:7474:7474"
+      - "127.0.0.1:7687:7687"
     healthcheck:
       test: ["CMD-SHELL", "wget -q --spider http://localhost:7474 || exit 1"]
       interval: 10s
@@ -45,9 +50,10 @@ services:
       MINIO_ROOT_PASSWORD: cranus-dev-secret
     volumes:
       - minio_data:/data
+    # See postgres comment above re: localhost-only binding.
     ports:
-      - "9000:9000"
-      - "9001:9001"
+      - "127.0.0.1:9000:9000"
+      - "127.0.0.1:9001:9001"
     healthcheck:
       test: ["CMD", "mc", "ready", "local"]
       interval: 5s

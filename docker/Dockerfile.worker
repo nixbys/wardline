@@ -15,6 +15,13 @@ COPY alembic.ini ./alembic.ini
 RUN pip install --no-cache-dir -e ".[dev]" \
     && python -m spacy download en_core_web_sm
 
-ENV PYTHONUNBUFFERED=1
+ENV PYTHONUNBUFFERED=1 \
+    HOME=/home/cranus
+
+# Non-root: same rationale as Dockerfile.api. The worker also downloads the
+# HF model cache lazily, so HOME must be owned by this user.
+RUN useradd --create-home --home-dir /home/cranus --shell /usr/sbin/nologin cranus \
+    && chown -R cranus:cranus /app
+USER cranus
 
 CMD ["python", "-m", "cranus.worker.main"]

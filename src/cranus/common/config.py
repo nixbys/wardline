@@ -77,6 +77,7 @@ class Settings(BaseSettings):
     kill_switch_enabled_default: bool = False
     rate_limit_query_per_minute: int = 30
     rate_limit_upload_per_minute: int = 10
+    upload_max_bytes: int = 50 * 1024 * 1024  # 50 MiB
 
     # --- Agent mode guardrails ---
     agent_max_steps: int = 6

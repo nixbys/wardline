@@ -6,10 +6,11 @@ endpoints.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, File, Form, UploadFile
+from fastapi import APIRouter, Depends, File, Form, HTTPException, UploadFile
 from sqlalchemy.orm import Session
 
 from cranus.api.deps import get_db, require_role
+from cranus.common.config import get_settings
 from cranus.connectors.base import SourceItem
 from cranus.connectors.registry import get_connector
 from cranus.ingestion.pipeline import ingest_item
@@ -18,6 +19,29 @@ from cranus.storage.models.governance import ROLE_ADMIN, ROLE_ANALYST, User
 
 router = APIRouter(prefix="/v1/documents", tags=["upload"])
 _operator_role = require_role(ROLE_ADMIN, ROLE_ANALYST)
+
+_READ_CHUNK_BYTES = 1024 * 1024
+
+
+async def _read_bounded(file: UploadFile, max_bytes: int) -> bytes:
+    """Read in chunks and abort once over budget, instead of `file.read()`
+    unconditionally buffering an arbitrarily large body into memory first —
+    the check has to happen during the read, not after it, or the DoS it's
+    meant to prevent has already happened by the time we'd reject it.
+    """
+    chunks: list[bytes] = []
+    total = 0
+    while True:
+        chunk = await file.read(_READ_CHUNK_BYTES)
+        if not chunk:
+            break
+        total += len(chunk)
+        if total > max_bytes:
+            raise HTTPException(
+                status_code=413, detail=f"file exceeds the {max_bytes} byte upload limit"
+            )
+        chunks.append(chunk)
+    return b"".join(chunks)
 
 
 @router.post("/upload")
@@ -31,7 +55,7 @@ async def upload_document(
     register_source(db, "upload", connector.default_license, config_schema={})
     db.commit()
 
-    content = await file.read()
+    content = await _read_bounded(file, get_settings().upload_max_bytes)
     item = SourceItem(
         ref=file.filename or "upload",
         extra={"content": content, "filename": file.filename, "content_type": file.content_type, "license": license},
