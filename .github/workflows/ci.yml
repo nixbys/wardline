@@ -37,6 +37,16 @@ jobs:
         options: >-
           --health-cmd "wget -q --spider http://localhost:7474 || exit 1"
           --health-interval 10s --health-timeout 5s --health-retries 10
+      opensearch:
+        image: opensearchproject/opensearch:2
+        env:
+          discovery.type: single-node
+          DISABLE_SECURITY_PLUGIN: "true"
+          OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+        ports: ["9200:9200"]
+        options: >-
+          --health-cmd "curl -sf http://localhost:9200 || exit 1"
+          --health-interval 10s --health-timeout 5s --health-retries 15
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -76,6 +86,7 @@ jobs:
           NEO4J_PASSWORD: cranus-dev-password
           API_KEY_PEPPER: ci-test-pepper-not-for-production
           KEYCLOAK_BASE_URL: http://localhost:8090
+          OPENSEARCH_URL: http://localhost:9200
         run: pytest tests/unit tests/integration -v
 
   docker-build:

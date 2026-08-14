@@ -19,7 +19,7 @@ Seven planes, matching the source report's design:
 | Collection | `src/cranus/connectors/` | Wikipedia, Wikidata, SEC EDGAR, OpenCorporates, archive.org (Wayback Machine), user upload, and a robots.txt-respecting web crawler — all behind one `Connector` interface (`base.py`), discoverable via a plugin registry (`registry.py`) |
 | Ingestion & processing | `src/cranus/ingestion/` | HTML/PDF/OCR extraction, language detection, PII tagging, quality gates (quarantine on failure), structural chunking |
 | Storage lakehouse | `src/cranus/storage/` | Postgres (documents/chunks/entities/edges/governance), MinIO/S3 for bronze-tier raw bytes, Alembic migrations |
-| Retrieval substrate | `src/cranus/retrieval/` | Postgres `tsvector` lexical search + `pgvector` HNSW semantic search, fused with Reciprocal Rank Fusion, reranked with a local cross-encoder |
+| Retrieval substrate | `src/cranus/retrieval/` | Postgres `tsvector` lexical search (or real OpenSearch BM25, `LEXICAL_BACKEND=opensearch`) + `pgvector` HNSW semantic search, fused with Reciprocal Rank Fusion, reranked with a local cross-encoder |
 | Knowledge & fusion | `src/cranus/graph/` | spaCy NER, rule-based relation extraction, entity resolution (blocking → scoring → clustering → human review), Neo4j |
 | Query plane | `src/cranus/query/`, `src/cranus/agent/` | The RAG pipeline (`query/pipeline.py`) and the bounded agentic research loop (`agent/loop.py`), both citation-verified before returning |
 | Governance & security | `src/cranus/governance/` | Bearer-token auth, RBAC + ABAC, engagement-scoping for dual-use connectors, an admin kill switch, and an append-only audit log enforced by a Postgres trigger (not just application code) |
@@ -221,7 +221,7 @@ The report this was built from sketches a larger platform than a single build se
 | Kafka streaming bus | Postgres `SELECT ... FOR UPDATE SKIP LOCKED` job queue | A handful of slow-moving connectors don't need a streaming bus |
 | Airflow/Prefect/Dagster | A worker polling loop + `ingestion_jobs` table | Ingestion is a linear per-document pipeline, not a fan-out DAG |
 | Iceberg/Delta over object storage | Plain Postgres tables + MinIO for raw bytes only | No big-data-scale analytics requiring time-travel/schema evolution |
-| OpenSearch (true BM25) | Postgres `tsvector`/`ts_rank_cd` (BM25-*like*) | Avoids a second search engine; ParadeDB `pg_search` is the noted upgrade path |
+| ~~OpenSearch (true BM25)~~ **Implemented (optional)** | Postgres `tsvector`/`ts_rank_cd` stays the zero-extra-infra default; set `LEXICAL_BACKEND=opensearch` for a real OpenSearch BM25 index instead (`retrieval/opensearch_backend.py`), live-tested against a real OpenSearch in CI | Closed as an opt-in upgrade path rather than a default swap — a handful of documents still don't need a second search engine running unconditionally; `docker compose --profile opensearch up opensearch` for local use |
 | Full ASR pipeline | Not implemented | No audio/video connectors in scope |
 | Cloud/commercial OCR | Local Tesseract | Adequate for typed/scanned filings, not handwriting |
 | ~~Enterprise IAM live-IdP test~~ **Implemented** | Optional OIDC JWT auth mode (see Production readiness), now live-tested end-to-end against a real Keycloak in CI (`tests/integration/test_oidc_live.py`) rather than validated by code review alone | Closed for Keycloak specifically; Okta/Auth0/Entra ID remain untested for lack of a free-tier account, though the code path is IdP-agnostic. MFA/Vault/KMS remain the IdP's/secrets-manager's own responsibility, not this app's |

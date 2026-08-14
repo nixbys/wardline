@@ -107,6 +107,15 @@ class Settings(BaseSettings):
     lexical_top_k: int = 50
     vector_top_k: int = 50
     rrf_k: int = 60
+
+    # --- Lexical backend: Postgres tsvector (default, zero extra infra) or
+    # real OpenSearch BM25 (see retrieval/opensearch_backend.py and
+    # "Scope reductions" in the README). Switching doesn't touch anything
+    # downstream of retrieval/lexical.py's lexical_search() -- fusion,
+    # rerank, and the API only ever see RetrievedChunk rows either way.
+    lexical_backend: str = "postgres"  # "postgres" | "opensearch"
+    opensearch_url: str = "http://opensearch:9200"
+    opensearch_index: str = "cranus-chunks"
     rerank_top_n: int = 12
     context_token_budget: int = 6000
 

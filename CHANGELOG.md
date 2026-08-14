@@ -80,6 +80,16 @@ releases, so entries are grouped by work session instead of version number.
   changed to match Keycloak's actual shape. `docker compose --profile oidc up keycloak` stands up the
   same IdP locally (not started by default).
 
+- `retrieval/opensearch_backend.py`: an optional real OpenSearch BM25 lexical backend
+  (`LEXICAL_BACKEND=opensearch`), the noted upgrade path from Postgres `tsvector`/`ts_rank_cd`'s
+  BM25-*like* ranking. Postgres stays the zero-extra-infra default -- this is an opt-in swap, not a
+  replacement, matching the project's own stated rationale for not requiring a second search engine
+  unconditionally. `retrieval/index.py` dual-writes to OpenSearch when enabled;
+  `retrieval/lexical.py`'s public `lexical_search()` dispatches to it transparently, so fusion/
+  rerank/API code needs no changes either way. `docker compose --profile opensearch up opensearch`
+  for local use; CI runs `tests/integration/test_opensearch_backend.py` against a real OpenSearch
+  service container.
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).

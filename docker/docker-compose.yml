@@ -197,6 +197,25 @@ services:
     mem_limit: 512m
     cpus: 0.5
 
+  # Optional real BM25 lexical backend (retrieval/opensearch_backend.py),
+  # the noted upgrade path from Postgres tsvector's BM25-*like* ranking.
+  # Not started by default -- `docker compose --profile opensearch up
+  # opensearch`, then set LEXICAL_BACKEND=opensearch in .env. This is also
+  # how tests/integration/test_opensearch_backend.py exercises the real
+  # thing in CI.
+  opensearch:
+    image: opensearchproject/opensearch:2
+    profiles: ["opensearch"]
+    restart: unless-stopped
+    environment:
+      discovery.type: single-node
+      DISABLE_SECURITY_PLUGIN: "true"
+      OPENSEARCH_JAVA_OPTS: "-Xms512m -Xmx512m"
+    ports:
+      - "127.0.0.1:9200:9200"
+    mem_limit: 1g
+    cpus: 1.0
+
 volumes:
   pgdata:
   neo4j_data:

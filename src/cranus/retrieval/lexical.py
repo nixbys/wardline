@@ -41,6 +41,11 @@ LIMIT :k
 def lexical_search(
     db: Session, query: str, k: int | None = None, filters: dict | None = None
 ) -> list[RetrievedChunk]:
+    if get_settings().lexical_backend == "opensearch":
+        from cranus.retrieval.opensearch_backend import lexical_search_opensearch
+
+        return lexical_search_opensearch(query, k, filters)
+
     filters = filters or {}
     k = k or get_settings().lexical_top_k
     rows = db.execute(

@@ -1,17 +1,23 @@
 """Turns a stored Document's cleaned text into indexed Chunk rows: chunk,
 embed, persist. `tsv` (lexical) is a DB-generated column, so inserting the
-row is all that's needed to make it lexically searchable too.
+row is all that's needed to make it lexically searchable too -- unless
+`settings.lexical_backend == "opensearch"`, in which case each chunk is
+also written to the real OpenSearch index (retrieval/opensearch_backend.py)
+alongside the Postgres row; the tsv column is harmless dead weight in that
+mode, not removed, since switching back never loses data.
 """
 
 from __future__ import annotations
 
 from sqlalchemy.orm import Session
 
+from cranus.common.config import get_settings
 from cranus.common.logging import get_logger
 from cranus.ingestion.chunking import chunk_text
 from cranus.ingestion.pii import tag_pii
 from cranus.retrieval.embeddings import current_model_name, embed_texts
 from cranus.storage.models.chunks import Chunk
+from cranus.storage.models.documents import Document
 
 logger = get_logger(__name__)
 
@@ -23,6 +29,8 @@ def index_document(db: Session, doc_id: str, text: str) -> list[str]:
 
     embeddings = embed_texts([s.text for s in spans])
     model_name = current_model_name()
+    use_opensearch = get_settings().lexical_backend == "opensearch"
+    doc = db.get(Document, doc_id) if use_opensearch else None
 
     chunk_ids = []
     for span, embedding in zip(spans, embeddings, strict=True):
@@ -39,6 +47,11 @@ def index_document(db: Session, doc_id: str, text: str) -> list[str]:
         db.add(chunk)
         db.flush()
         chunk_ids.append(chunk.id)
+
+        if use_opensearch and doc is not None:
+            from cranus.retrieval.opensearch_backend import index_chunk
+
+            index_chunk(chunk.id, doc_id, span.text, doc.lang, doc.status, doc.published_at)
 
     logger.info("index.document_indexed", doc_id=doc_id, chunk_count=len(chunk_ids))
     return chunk_ids
