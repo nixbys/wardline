@@ -14,7 +14,7 @@ import typer
 from cranus.common.logging import configure_logging, get_logger
 from cranus.common.security import generate_api_key, lookup_key_for_index
 from cranus.storage.db import sync_session
-from cranus.storage.models.governance import ROLE_ADMIN, User, ApiKey
+from cranus.storage.models.governance import ROLE_ADMIN, ApiKey, User
 
 app = typer.Typer()
 logger = get_logger(__name__)

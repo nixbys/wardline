@@ -14,7 +14,11 @@ from sqlalchemy.orm import Session
 from cranus.common.logging import get_logger
 from cranus.graph import sync
 from cranus.graph.entity_resolution.blocking import block_key
-from cranus.graph.entity_resolution.review import HIGH_CONFIDENCE_THRESHOLD, REVIEW_THRESHOLD, queue_for_review
+from cranus.graph.entity_resolution.review import (
+    HIGH_CONFIDENCE_THRESHOLD,
+    REVIEW_THRESHOLD,
+    queue_for_review,
+)
 from cranus.graph.entity_resolution.scoring import score_pair
 from cranus.graph.ner import Mention, extract_mentions
 from cranus.graph.relation_extraction import extract_relations
@@ -92,10 +96,12 @@ def _resolve_mention(db: Session, mention: Mention) -> tuple[Entity, bool, bool]
     best_entity: Entity | None = None
     best_score = 0.0
     for candidate in candidates:
-        if block_key(candidate.type, candidate.canonical_name) != key:
-            # cheap short-circuit: still allow alias matches to survive blocking
-            if mention.span_text.lower() not in [a.lower() for a in candidate.aliases]:
-                continue
+        # cheap short-circuit: still allow alias matches to survive blocking
+        if (
+            block_key(candidate.type, candidate.canonical_name) != key
+            and mention.span_text.lower() not in [a.lower() for a in candidate.aliases]
+        ):
+            continue
         score = score_pair(mention.span_text, candidate.canonical_name)
         if score > best_score:
             best_score, best_entity = score, candidate

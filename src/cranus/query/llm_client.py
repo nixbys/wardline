@@ -14,7 +14,11 @@ from typing import Protocol
 
 from cranus.common.config import get_settings
 from cranus.common.logging import get_logger
-from cranus.query.prompts import DECOMPOSITION_PROMPT, SYSTEM_SYNTHESIS, build_synthesis_user_message
+from cranus.query.prompts import (
+    DECOMPOSITION_PROMPT,
+    SYSTEM_SYNTHESIS,
+    build_synthesis_user_message,
+)
 
 logger = get_logger(__name__)
 

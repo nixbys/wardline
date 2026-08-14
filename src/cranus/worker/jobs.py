@@ -52,7 +52,7 @@ def run_job(job: IngestionJob) -> None:
         result = run_connector_job(connector, job.params)
         _finish(job.id, status="succeeded", result=result)
         logger.info("job.succeeded", job_id=job.id, result=result)
-    except Exception as exc:  # noqa: BLE001 - worker must never crash on a bad job
+    except Exception as exc:  # worker must never crash on a bad job
         logger.error("job.failed", job_id=job.id, error=str(exc))
         _finish(job.id, status="failed", error=f"{exc}\n{traceback.format_exc()}")
 

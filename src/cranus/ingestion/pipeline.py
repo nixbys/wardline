@@ -16,8 +16,8 @@ import asyncio
 
 from sqlalchemy import select
 
-from cranus.connectors.base import Connector, SourceItem
 from cranus.common.logging import get_logger
+from cranus.connectors.base import Connector, SourceItem
 from cranus.ingestion.normalize import clean_text, detect_language
 from cranus.ingestion.quality_gates import check_document
 from cranus.storage.blobstore import get_blob_store
@@ -35,7 +35,7 @@ async def ingest_item(connector: Connector, item: SourceItem) -> dict:
 
     try:
         raw = await connector.fetch(item)
-    except Exception as exc:  # noqa: BLE001 - caller must not crash on one bad item
+    except Exception as exc:
         logger.error("ingest.fetch_failed", connector=connector.name, ref=item.ref, error=str(exc))
         return {"status": "error", "doc_id": None, "error": str(exc)}
 
@@ -57,7 +57,7 @@ async def ingest_item(connector: Connector, item: SourceItem) -> dict:
 
     try:
         parsed = connector.parse(raw)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         logger.error("ingest.parse_failed", connector=connector.name, ref=item.ref, error=str(exc))
         return {"status": "error", "doc_id": None, "error": str(exc)}
 

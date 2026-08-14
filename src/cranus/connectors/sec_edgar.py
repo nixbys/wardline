@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import asyncio
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import tenacity
@@ -90,7 +90,7 @@ class SecEdgarConnector(Connector):
             uri=url,
             content=resp.content,
             content_type=content_type,
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             extra=item.extra,
         )
 
@@ -114,7 +114,7 @@ class SecEdgarConnector(Connector):
 
         published_at = None
         if raw.extra.get("filing_date"):
-            published_at = datetime.fromisoformat(raw.extra["filing_date"]).replace(tzinfo=timezone.utc)
+            published_at = datetime.fromisoformat(raw.extra["filing_date"]).replace(tzinfo=UTC)
 
         title = f"{raw.extra.get('company_name', 'Unknown')} — {raw.extra.get('form', 'filing')}"
         return ParsedDocument(

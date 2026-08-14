@@ -7,7 +7,7 @@ mode="auto" routes there (Phase 5).
 from __future__ import annotations
 
 import re
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 _YEAR_SINCE_RE = re.compile(r"\b(?:since|after)\s+(\d{4})\b", re.IGNORECASE)
 
@@ -17,5 +17,5 @@ def extract_constraints(question: str) -> dict:
     match = _YEAR_SINCE_RE.search(question)
     if match:
         year = int(match.group(1))
-        constraints["published_after"] = datetime(year, 1, 1, tzinfo=timezone.utc)
+        constraints["published_after"] = datetime(year, 1, 1, tzinfo=UTC)
     return constraints

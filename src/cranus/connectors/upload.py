@@ -7,7 +7,7 @@ system dependency).
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import filetype
 
@@ -33,7 +33,7 @@ class UploadConnector(Connector):
             uri=item.ref,
             content=content,
             content_type=content_type,
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             extra={"filename": item.extra.get("filename", item.ref), "license": item.extra.get("license")},
         )
 

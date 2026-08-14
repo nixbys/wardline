@@ -9,7 +9,7 @@ but should never be interpreted loosely enough to cover "notacme.com" or
 
 from __future__ import annotations
 
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 from sqlalchemy.orm import Session
 
@@ -29,7 +29,7 @@ def get_engagement(db: Session, engagement_id: str) -> Engagement | None:
 
 
 def is_active(engagement: Engagement, *, now: datetime | None = None) -> bool:
-    now = now or datetime.now(timezone.utc)
+    now = now or datetime.now(UTC)
     if engagement.revoked_at is not None:
         return False
     return engagement.valid_from <= now <= engagement.valid_until
@@ -39,6 +39,6 @@ def revoke_engagement(db: Session, engagement_id: str) -> Engagement | None:
     engagement = db.get(Engagement, engagement_id)
     if engagement is None:
         return None
-    engagement.revoked_at = datetime.now(timezone.utc)
+    engagement.revoked_at = datetime.now(UTC)
     db.flush()
     return engagement

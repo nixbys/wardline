@@ -15,7 +15,7 @@ us-gov-open-data tag.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import tenacity
@@ -108,7 +108,7 @@ class OpenCorporatesConnector(Connector):
             uri=canonical_url,
             content=text.encode("utf-8"),
             content_type="text/plain",
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             extra={"name": company.get("name")},
         )
 

@@ -15,7 +15,7 @@ from __future__ import annotations
 import asyncio
 import urllib.robotparser
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 from urllib.parse import urljoin, urlparse
 
 import httpx
@@ -154,7 +154,7 @@ class WebCrawlerConnector(Connector):
             uri=item.ref,
             content=content,
             content_type="text/html",
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
         )
 
     def parse(self, raw: RawObject) -> ParsedDocument:

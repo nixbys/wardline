@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
 
     try:
         ensure_constraints()
-    except Exception as exc:  # noqa: BLE001 - Neo4j being briefly unavailable shouldn't crash the API
+    except Exception as exc:  # Neo4j being briefly unavailable shouldn't crash the API
         logger.error("startup.neo4j_constraints_failed", error=str(exc))
 
     yield
@@ -82,7 +82,10 @@ def create_app() -> FastAPI:
             path=request.url.path,
             method=request.method,
             error=str(exc),
-            exc_info=True,
+            # Pass the exception object explicitly rather than `True`: this handler
+            # runs as an ASGI callback, not inside a literal `except` block, so
+            # relying on the ambient sys.exc_info() is not guaranteed to work.
+            exc_info=exc,
         )
         return JSONResponse(status_code=500, content={"detail": "internal server error"})
 

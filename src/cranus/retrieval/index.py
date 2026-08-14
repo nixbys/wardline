@@ -25,7 +25,7 @@ def index_document(db: Session, doc_id: str, text: str) -> list[str]:
     model_name = current_model_name()
 
     chunk_ids = []
-    for span, embedding in zip(spans, embeddings):
+    for span, embedding in zip(spans, embeddings, strict=True):
         chunk = Chunk(
             doc_id=doc_id,
             text=span.text,

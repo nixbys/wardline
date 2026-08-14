@@ -11,19 +11,18 @@ two, and no core-repo change needed to add one.
 from __future__ import annotations
 
 from importlib.metadata import entry_points
-from typing import Type
 
 from cranus.common.logging import get_logger
 from cranus.connectors.base import Connector
 
 logger = get_logger(__name__)
 
-_REGISTRY: dict[str, Type[Connector]] = {}
+_REGISTRY: dict[str, type[Connector]] = {}
 _ENTRY_POINTS_LOADED = False
 
 
 def register_connector(name: str):
-    def decorator(cls: Type[Connector]):
+    def decorator(cls: type[Connector]):
         cls.name = name
         _REGISTRY[name] = cls
         return cls
@@ -54,7 +53,7 @@ def _load_entry_point_connectors() -> None:
             _REGISTRY[ep.name] = cls
             cls.name = ep.name
             logger.info("connector.registered_external", name=ep.name)
-        except Exception as exc:  # noqa: BLE001 - a broken plugin shouldn't break startup
+        except Exception as exc:
             logger.error("connector.load_failed", name=ep.name, error=str(exc))
     _ENTRY_POINTS_LOADED = True
 
@@ -65,7 +64,7 @@ def _ensure_loaded() -> None:
     _load_entry_point_connectors()
 
 
-def list_connectors() -> dict[str, Type[Connector]]:
+def list_connectors() -> dict[str, type[Connector]]:
     _ensure_loaded()
     return dict(_REGISTRY)
 

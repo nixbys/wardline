@@ -13,7 +13,7 @@ recovering sources that have since gone offline or been edited.
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import tenacity
@@ -82,7 +82,7 @@ class ArchiveOrgConnector(Connector):
                     continue  # header row only, or no snapshots found
                 header, *snapshots = rows
                 for row in snapshots:
-                    record = dict(zip(header, row))
+                    record = dict(zip(header, row, strict=True))
                     timestamp = record["timestamp"]
                     snapshot_url = f"https://web.archive.org/web/{timestamp}/{original_url}"
                     yield SourceItem(
@@ -96,12 +96,12 @@ class ArchiveOrgConnector(Connector):
             timestamp = item.extra.get("timestamp")
             published_at = None
             if timestamp:
-                published_at = datetime.strptime(timestamp, "%Y%m%d%H%M%S").replace(tzinfo=timezone.utc)
+                published_at = datetime.strptime(timestamp, "%Y%m%d%H%M%S").replace(tzinfo=UTC)
             return RawObject(
                 uri=item.ref,
                 content=resp.content,
                 content_type="text/html",
-                fetched_at=datetime.now(timezone.utc),
+                fetched_at=datetime.now(UTC),
                 extra={
                     "original_url": item.extra.get("original_url"),
                     "timestamp": timestamp,

@@ -7,7 +7,7 @@ License is always CC-BY-SA-4.0 with the required attribution captured in
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 import httpx
 import tenacity
@@ -103,7 +103,7 @@ class WikipediaConnector(Connector):
             uri=canonical_url,
             content=html.encode("utf-8"),
             content_type="text/html",
-            fetched_at=datetime.now(timezone.utc),
+            fetched_at=datetime.now(UTC),
             extra={
                 "title": page["title"],
                 "revid": revid,
@@ -118,7 +118,7 @@ class WikipediaConnector(Connector):
         extracted = extract_html(raw.content)
         published_at = None
         if raw.extra.get("published_at"):
-            published_at = datetime.fromisoformat(raw.extra["published_at"].replace("Z", "+00:00"))
+            published_at = datetime.fromisoformat(raw.extra["published_at"])
         return ParsedDocument(
             uri=raw.uri,
             title=raw.extra.get("title") or extracted.title or raw.uri,

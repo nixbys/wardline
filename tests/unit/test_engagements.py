@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta, timezone
+from datetime import UTC, datetime, timedelta
 
 import pytest
 
@@ -9,17 +9,17 @@ from cranus.storage.models.engagements import Engagement
 
 
 def _engagement(**overrides) -> Engagement:
-    now = datetime.now(timezone.utc)
-    defaults = dict(
-        id="eng_1",
-        target="acme.com",
-        scope_note="external footprint assessment",
-        evidence_ref="SOW-2026-001",
-        authorized_by_user_id="user_1",
-        valid_from=now - timedelta(days=1),
-        valid_until=now + timedelta(days=30),
-        revoked_at=None,
-    )
+    now = datetime.now(UTC)
+    defaults = {
+        "id": "eng_1",
+        "target": "acme.com",
+        "scope_note": "external footprint assessment",
+        "evidence_ref": "SOW-2026-001",
+        "authorized_by_user_id": "user_1",
+        "valid_from": now - timedelta(days=1),
+        "valid_until": now + timedelta(days=30),
+        "revoked_at": None,
+    }
     defaults.update(overrides)
     return Engagement(**defaults)
 
@@ -45,18 +45,18 @@ def test_is_active_true_within_window():
 
 
 def test_is_active_false_when_revoked():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     assert not is_active(_engagement(revoked_at=now))
 
 
 def test_is_active_false_when_expired():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     engagement = _engagement(valid_from=now - timedelta(days=10), valid_until=now - timedelta(days=1))
     assert not is_active(engagement)
 
 
 def test_is_active_false_before_start():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     engagement = _engagement(valid_from=now + timedelta(days=1), valid_until=now + timedelta(days=10))
     assert not is_active(engagement)
 
@@ -80,7 +80,7 @@ def test_enforce_engagement_scope_rejects_unknown_engagement():
 
 
 def test_enforce_engagement_scope_rejects_revoked():
-    now = datetime.now(timezone.utc)
+    now = datetime.now(UTC)
     db = _FakeDb(_engagement(revoked_at=now))
     with pytest.raises(AccessDeniedError, match="revoked or outside"):
         pep.enforce_engagement_scope(db, "eng_1", "acme.com")

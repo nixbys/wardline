@@ -6,7 +6,6 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
-
 from sqlalchemy.orm import Session
 
 from cranus.api.deps import get_current_user, get_db

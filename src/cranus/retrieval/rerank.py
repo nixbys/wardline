@@ -23,5 +23,7 @@ def rerank(query: str, candidates: list[FusedResult], top_n: int | None = None) 
     top_n = top_n or get_settings().rerank_top_n
     pairs = [(query, c.text) for c in candidates]
     scores = _model().predict(pairs)
-    ordered = [c for _, c in sorted(zip(scores, candidates), key=lambda x: x[0], reverse=True)]
+    ordered = [
+        c for _, c in sorted(zip(scores, candidates, strict=True), key=lambda x: x[0], reverse=True)
+    ]
     return ordered[:top_n]

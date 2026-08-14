@@ -11,7 +11,7 @@ import hashlib
 from abc import ABC, abstractmethod
 from collections.abc import AsyncIterator
 from dataclasses import dataclass, field
-from datetime import datetime, timezone
+from datetime import UTC, datetime
 
 
 @dataclass
@@ -30,7 +30,7 @@ class RawObject:
     uri: str
     content: bytes
     content_type: str
-    fetched_at: datetime = field(default_factory=lambda: datetime.now(timezone.utc))
+    fetched_at: datetime = field(default_factory=lambda: datetime.now(UTC))
     extra: dict = field(default_factory=dict)
 
     @property
