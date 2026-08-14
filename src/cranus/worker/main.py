@@ -33,6 +33,14 @@ def run_forever() -> None:
             run_scheduled_batch_resolution,
             settings.entity_resolution_batch_interval_seconds,
         )
+    if settings.iceberg_export_enabled:
+        from cranus.storage.iceberg_export import export_audit_events
+
+        register_periodic(
+            "iceberg-audit-export",
+            export_audit_events,
+            settings.iceberg_export_interval_seconds,
+        )
     start_scheduler()
 
     from cranus.worker.jobs import claim_job_by_id, claim_next_job, run_job

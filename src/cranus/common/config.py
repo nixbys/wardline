@@ -189,6 +189,10 @@ class Settings(BaseSettings):
     agent_max_steps: int = 6
     agent_max_total_tokens: int = 20000
 
+    # --- Iceberg analytical export (storage/iceberg_export.py) ---
+    iceberg_export_enabled: bool = True
+    iceberg_export_interval_seconds: int = 21600  # 6 hours
+
     # --- Entity resolution ---
     # Periodic Splink batch dedupe pass (graph/entity_resolution/splink_batch.py),
     # complementing the synchronous per-mention resolver used at ingestion time.

@@ -13,5 +13,6 @@ htmlcov/
 dist/
 build/
 data/bronze/
+data/iceberg-warehouse/
 *.log
 .DS_Store

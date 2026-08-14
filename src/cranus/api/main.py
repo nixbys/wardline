@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from cranus.api.routers import (
     admin_connectors,
     admin_engagements,
+    admin_iceberg,
     admin_users,
     audit,
     entity_review,
@@ -98,6 +99,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_users.router)
     app.include_router(admin_connectors.router)
     app.include_router(admin_engagements.router)
+    app.include_router(admin_iceberg.router)
     app.include_router(upload.router)
     return app
 

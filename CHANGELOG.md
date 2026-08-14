@@ -131,6 +131,20 @@ releases, so entries are grouped by work session instead of version number.
   `BLOB_BACKEND=s3`/MinIO default hangs badly (DNS+retry backoff) rather than failing fast when MinIO
   isn't running, unrelated to this change but worth knowing.
 
+- `storage/iceberg_export.py`: a real Iceberg table (genuine time-travel and schema evolution) mirroring
+  `audit_events` -- this app's own append-only table, exactly the analytics-shaped dataset the noted
+  Iceberg/Delta upgrade path is for, not a wholesale swap of the OLTP tables (`documents`/`chunks`/
+  `entities`) that don't need it. No new infrastructure: the catalog reuses this app's own Postgres
+  (pyiceberg's `SqlCatalog`), the warehouse reuses whichever `blob_backend` is already configured
+  (local filesystem by default, the same MinIO/S3 bucket when `BLOB_BACKEND=s3`). Idempotent/
+  incremental (tracks the latest exported `created_at` via a scan of the Iceberg table itself). New
+  admin endpoint `POST /v1/admin/iceberg/export-audit-events`, also runs on a schedule
+  (`iceberg_export_interval_seconds`, default 6h). `tests/integration/test_iceberg_export.py` verifies
+  real incremental export and real time-travel (an old snapshot still reports the old row count after
+  the table has since grown) against a real Postgres. Verified locally end-to-end (including that
+  `audit_events`' append-only DB trigger genuinely rejects DELETE, confirmed by a test fixture that
+  originally tried to clean up that way) before pushing.
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).
