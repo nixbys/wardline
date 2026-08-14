@@ -44,6 +44,33 @@ releases, so entries are grouped by work session instead of version number.
   {value}."`), which the project's spaCy small-model NER reliably fails to tag as an ORG mention in
   short sentences — with no org mention in the sentence, relation extraction silently produced zero
   edges. Rewrote templates to active/copula voice, verified live against the actual model.
+- CI's lint job floated to whatever `ruff` was latest on each run; 0.16.x enables far more
+  default-adjacent rule families than this repo was last green against, so 76 pre-existing findings
+  surfaced with no code change of ours. Pinned `ruff==0.16.3` in both `pyproject.toml` and
+  `ci.yml`, added an explicit `[tool.ruff.lint]` select list, and fixed the real findings
+  (`datetime.now(UTC)` throughout, explicit `zip(..., strict=True)`, a dict-literal instead of
+  `dict()`, a redundant `.replace("Z", ...)`, a collapsible nested `if`, and passing the exception
+  object explicitly to `exc_info=` in the global FastAPI exception handler since it runs as an ASGI
+  callback, not inside a literal `except:` block).
+- `graph/relation_extraction.py` linked *every* Person mention to *every* Organization mention in
+  any sentence containing a trigger word ("founded", "acquired", ...), regardless of which noun
+  phrase the verb actually attached to — a bystander or an unrelated org named in the same sentence
+  produced a spurious edge. Replaced the sentence-scoped keyword match with a dependency-tree walk
+  from the trigger token (nsubj/nsubjpass/agent/dobj, `conj` coordination, relative-clause
+  antecedent resolution), with a narrowly-scoped single-candidate fallback for the small model's
+  occasional mis-parse of a hyphenated "co-founded". See the updated scope-reductions table.
+
+### Security
+- Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
+  GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).
+- Bumped `cryptography` 49.0.0 → 50.0.0 (Dependabot #2: PKCS#7 `EnvelopedData` Bleichenbacher
+  oracle via distinguishable errors/timing).
+- Dismissed Dependabot #1 (`ecdsa`, Minerva timing attack, no upstream fix — the project's stated
+  position is that side-channel resistance is out of scope for pure Python). Verified this app's
+  actual dependency resolution: `python-jose[cryptography]`'s backend selector always picks
+  `CryptographyECKey` when `cryptography` is importable (it always is here), so
+  `jose.backends.ecdsa_backend`'s vulnerable pure-Python path is never imported for JWT
+  verification.
 
 ## [0.1.0] - 2026-07-09
 

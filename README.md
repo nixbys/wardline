@@ -220,7 +220,7 @@ The report this was built from sketches a larger platform than a single build se
 | Cloud/commercial OCR | Local Tesseract | Adequate for typed/scanned filings, not handwriting |
 | Enterprise IAM (OIDC/MFA, Vault/KMS) | Optional OIDC JWT auth mode (see Production readiness) alongside the default API-key system | OIDC path exists but isn't live-tested against a real IdP; MFA is the IdP's responsibility, not this app's |
 | Splink/Dedupe entity resolution | Homemade blocking (metaphone) + scoring (rapidfuzz/jaro-winkler) + clustering (connected components) | Splink is the noted upgrade path if accuracy needs to scale |
-| Dependency-parse relation extraction | Sentence-scoped keyword-trigger rules | Real, but coarser than true NLP relation extraction — produces some false positives (documented, not hidden) |
+| ~~Dependency-parse relation extraction~~ **Implemented** | spaCy dependency-tree walk (nsubj/nsubjpass/agent/dobj, `conj` coordination, relative-clause antecedents) from trigger tokens, not a keyword-only sentence match | Closed — see `graph/relation_extraction.py`; a narrowly-scoped single-candidate fallback covers the small model's occasional mis-parse of hyphenated "co-founded" without reintroducing the old cartesian-product false positives |
 
 ## The legal boundary
 
