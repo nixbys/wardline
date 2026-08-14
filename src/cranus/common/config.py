@@ -108,6 +108,13 @@ class Settings(BaseSettings):
     vector_top_k: int = 50
     rrf_k: int = 60
 
+    # --- ASR (speech-to-text) for uploaded audio/video, via faster-whisper
+    # (local, open-source, CTranslate2-backed -- no paid API, matching this
+    # project's stance on embeddings/reranking). "tiny" is fast enough for
+    # a lean single-node build; "small"/"medium"/"large-v3" trade speed for
+    # accuracy on noisier recordings. See ingestion/extractors/audio.py.
+    asr_model: str = "tiny"
+
     # --- OCR backend: local Tesseract (default, no external account needed)
     # or AWS Textract for higher accuracy on messier scans (see
     # ingestion/extractors/textract_ocr.py and "Scope reductions" in the

@@ -98,6 +98,14 @@ releases, so entries are grouped by work session instead of version number.
   validates the LINE-block text-joining logic moto's stub can't exercise. Documented in the README
   as untested-against-real-AWS, not hidden.
 
+- `ingestion/extractors/audio.py`: local speech-to-text via `faster-whisper` (`ASR_MODEL`, default
+  `tiny`), reachable through the existing `upload` connector -- audio/video files get transcribed the
+  same lawful, user-provided-data way PDFs/HTML/JSON already do, not a new scraping-style connector
+  against a third-party platform. Local/open-source rather than a cloud ASR API, matching this
+  project's existing embeddings/reranking stance. `tests/unit/test_audio.py` runs the real "tiny"
+  model end-to-end against a synthetic WAV (a decode/transcribe pipeline smoke test, not an accuracy
+  test -- the input is a pure tone, not speech).
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).

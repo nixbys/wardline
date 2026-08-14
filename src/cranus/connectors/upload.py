@@ -50,6 +50,10 @@ class UploadConnector(Connector):
             from cranus.ingestion.extractors.structured import extract_json
 
             text = extract_json(raw.content).text
+        elif raw.content_type.startswith("audio/") or raw.content_type.startswith("video/"):
+            from cranus.ingestion.extractors.audio import transcribe_audio
+
+            text = transcribe_audio(raw.content).text
         else:
             text = raw.content.decode("utf-8", errors="replace")
 
