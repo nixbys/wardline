@@ -69,6 +69,17 @@ releases, so entries are grouped by work session instead of version number.
   `POST /v1/admin/entity-review/batch-resolve`. New `tests/integration/` suite (first entry in that
   previously-empty directory) exercising the full pass against a real Postgres, now also run by CI.
 
+- Live-tested `AUTH_MODE=oidc` against a real Keycloak instead of code review alone: CI now starts a real
+  `quay.io/keycloak/keycloak` container (a `docker run` step, not a `services:` block -- the official image
+  needs a `start-dev` command argument that block has no way to pass) and
+  `tests/integration/test_oidc_live.py` provisions a throwaway realm/client/role via the admin REST API,
+  gets a real signed token, and validates it end-to-end through `oidc_auth.validate_token` -- plus
+  tampered-signature and wrong-issuer rejection. Found and fixed a real bug this surfaced: the default
+  `OIDC_ROLE_CLAIM=roles` assumed a flat top-level claim, but Keycloak puts realm roles at nested
+  `realm_access.roles` -- `oidc_auth._resolve_role` now resolves a dotted claim path, and the default
+  changed to match Keycloak's actual shape. `docker compose --profile oidc up keycloak` stands up the
+  same IdP locally (not started by default).
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).

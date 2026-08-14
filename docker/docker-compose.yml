@@ -177,6 +177,26 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  # Optional local IdP for exercising AUTH_MODE=oidc (api/oidc_auth.py)
+  # without a real Okta/Auth0/Entra ID tenant. Not started by default --
+  # `docker compose --profile oidc up keycloak`, then create a realm/client
+  # and point OIDC_ISSUER/OIDC_JWKS_URL at it (http://localhost:8090/realms/<realm>).
+  # This is also how tests/integration/test_oidc_live.py exercises the real
+  # thing in CI (see .github/workflows/ci.yml).
+  keycloak:
+    image: quay.io/keycloak/keycloak:26.7.1
+    profiles: ["oidc"]
+    restart: unless-stopped
+    command: ["start-dev", "--http-port=8080"]
+    environment:
+      KEYCLOAK_ADMIN: admin
+      KEYCLOAK_ADMIN_PASSWORD: admin
+      KC_PROXY_HEADERS: xforwarded
+    ports:
+      - "127.0.0.1:8090:8080"
+    mem_limit: 512m
+    cpus: 0.5
+
 volumes:
   pgdata:
   neo4j_data:

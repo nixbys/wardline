@@ -45,8 +45,21 @@ def _get_jwks(jwks_url: str) -> dict:
     return jwks
 
 
+def _get_claim_path(claims: dict, dotted_path: str):
+    """Resolves a dotted path like "realm_access.roles" through nested
+    claim dicts -- Keycloak's realm roles live there, not in a flat
+    top-level claim; a flat name with no dots still works unchanged.
+    """
+    value = claims
+    for segment in dotted_path.split("."):
+        if not isinstance(value, dict):
+            return None
+        value = value.get(segment)
+    return value
+
+
 def _resolve_role(claims: dict, settings: Settings) -> str:
-    raw_roles = claims.get(settings.oidc_role_claim, [])
+    raw_roles = _get_claim_path(claims, settings.oidc_role_claim) or []
     if isinstance(raw_roles, str):
         raw_roles = [raw_roles]
     for raw in raw_roles:

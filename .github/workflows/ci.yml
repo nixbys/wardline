@@ -53,6 +53,19 @@ jobs:
           POSTGRES_PASSWORD: cranus
           POSTGRES_DB: cranus
         run: alembic upgrade head
+      - name: Start Keycloak (live IdP for the OIDC integration test)
+        # Not a `services:` container: the official image needs a `start-dev`
+        # command argument, which that block has no way to pass.
+        run: |
+          docker run -d --name keycloak -p 8090:8080 \
+            -e KEYCLOAK_ADMIN=admin -e KEYCLOAK_ADMIN_PASSWORD=admin \
+            -e KC_PROXY_HEADERS=xforwarded \
+            quay.io/keycloak/keycloak:26.7.1 start-dev --http-port=8080
+          for i in $(seq 1 30); do
+            code=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8090/realms/master || true)
+            [ "$code" = "200" ] && break
+            sleep 2
+          done
       - name: Run tests
         env:
           POSTGRES_HOST: localhost
@@ -62,6 +75,7 @@ jobs:
           NEO4J_URI: bolt://localhost:7687
           NEO4J_PASSWORD: cranus-dev-password
           API_KEY_PEPPER: ci-test-pepper-not-for-production
+          KEYCLOAK_BASE_URL: http://localhost:8090
         run: pytest tests/unit tests/integration -v
 
   docker-build:

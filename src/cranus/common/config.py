@@ -137,7 +137,12 @@ class Settings(BaseSettings):
     oidc_issuer: str | None = None
     oidc_jwks_url: str | None = None
     oidc_audience: str | None = None
-    oidc_role_claim: str = "roles"
+    # Dotted path into the token claims. Keycloak (this project's live-tested
+    # IdP) puts realm roles at `realm_access.roles`, not a flat top-level
+    # claim -- found by live-testing against a real Keycloak instance rather
+    # than assumed from the spec. Auth0/Okta typically use a flat namespaced
+    # claim (e.g. "https://yourapp.example.com/roles"); override for those.
+    oidc_role_claim: str = "realm_access.roles"
     # Maps a role string found in oidc_role_claim to this app's internal roles
     # (admin/analyst/viewer). Keys are matched case-insensitively.
     oidc_role_map: dict[str, str] = Field(
