@@ -106,6 +106,18 @@ releases, so entries are grouped by work session instead of version number.
   model end-to-end against a synthetic WAV (a decode/transcribe pipeline smoke test, not an accuracy
   test -- the input is a pure tone, not speech).
 
+- `worker/kafka_queue.py`: an optional real Kafka job-dispatch backend (`JOB_QUEUE_BACKEND=kafka`),
+  the noted upgrade path from the Postgres `SELECT ... FOR UPDATE SKIP LOCKED` queue. Postgres stays
+  the zero-extra-infra default. The `IngestionJob` row is still created either way (it's this app's
+  audit trail / job-status API, not just a work queue); Kafka is purely the dispatch signal, with
+  `worker/jobs.py::claim_job_by_id` still doing the state transition as a second guard against ever
+  double-running one job on redelivery. `docker compose --profile kafka up kafka` for local use
+  (KRaft mode, no ZooKeeper); CI runs a real single-node broker and
+  `tests/integration/test_kafka_queue.py` against it. Tracked down a well-known but easy-to-miss
+  single-node gotcha along the way: Kafka's default `offsets.topic.replication.factor=3` can never be
+  satisfied by one broker, so every consumer-group operation fails with `COORDINATOR_NOT_AVAILABLE`
+  *silently* (no error surfaced, requests just never complete) until it's set to `1`.
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).

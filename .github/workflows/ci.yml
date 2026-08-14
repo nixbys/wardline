@@ -47,6 +47,26 @@ jobs:
         options: >-
           --health-cmd "curl -sf http://localhost:9200 || exit 1"
           --health-interval 10s --health-timeout 5s --health-retries 15
+      kafka:
+        # KRaft mode (no ZooKeeper) single-node broker -- the official image's
+        # default command works from plain env vars, so (unlike Keycloak) this
+        # is a normal `services:` container.
+        image: apache/kafka:3.9.0
+        env:
+          KAFKA_NODE_ID: 1
+          KAFKA_PROCESS_ROLES: broker,controller
+          KAFKA_LISTENERS: PLAINTEXT://:9092,CONTROLLER://:9093
+          KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://localhost:9092
+          KAFKA_CONTROLLER_LISTENER_NAMES: CONTROLLER
+          KAFKA_CONTROLLER_QUORUM_VOTERS: 1@localhost:9093
+          KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,CONTROLLER:PLAINTEXT
+          KAFKA_INTER_BROKER_LISTENER_NAME: PLAINTEXT
+          # Default is 3, which a single broker can never satisfy -- every
+          # consumer-group operation fails with COORDINATOR_NOT_AVAILABLE
+          # forever (silently) without this.
+          KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+          CLUSTER_ID: cranus-ci-cluster-id
+        ports: ["9092:9092"]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -87,6 +107,7 @@ jobs:
           API_KEY_PEPPER: ci-test-pepper-not-for-production
           KEYCLOAK_BASE_URL: http://localhost:8090
           OPENSEARCH_URL: http://localhost:9200
+          KAFKA_BOOTSTRAP_SERVERS: localhost:9092
         run: pytest tests/unit tests/integration -v
 
   docker-build:

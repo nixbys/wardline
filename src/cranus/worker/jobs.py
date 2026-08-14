@@ -41,6 +41,33 @@ def claim_next_job() -> IngestionJob | None:
         return job
 
 
+def claim_job_by_id(job_id: str) -> IngestionJob | None:
+    """Kafka consume path (kafka_queue.py): the message already carries the
+    job_id (the API route created the row before publishing), so this just
+    marks it running -- same FOR UPDATE guard as claim_next_job, here as a
+    second line of defense against ever double-running one job if a
+    message is redelivered after a crash. Returns None (a no-op, not an
+    error) if the job isn't "pending" anymore -- exactly the redelivery
+    case.
+    """
+    with sync_session() as db:
+        stmt = (
+            select(IngestionJob)
+            .where(IngestionJob.id == job_id, IngestionJob.status == "pending")
+            .with_for_update(skip_locked=True)
+        )
+        job = db.execute(stmt).scalars().first()
+        if job is None:
+            return None
+        job.status = "running"
+        job.started_at = utcnow()
+        job.locked_by = _WORKER_ID
+        job.locked_at = utcnow()
+        db.flush()
+        db.expunge(job)
+        return job
+
+
 def run_job(job: IngestionJob) -> None:
     from cranus.connectors.config import resolve_connector_config
     from cranus.connectors.registry import get_connector

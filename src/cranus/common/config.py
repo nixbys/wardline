@@ -124,6 +124,17 @@ class Settings(BaseSettings):
     ocr_backend: str = "tesseract"  # "tesseract" | "textract"
     textract_region: str = "us-east-1"
 
+    # --- Job dispatch: Postgres `SELECT ... FOR UPDATE SKIP LOCKED` (default,
+    # zero extra infra -- see worker/jobs.py's own docstring on why this is
+    # a real substitute for a Kafka consumer group's exactly-once-per-group
+    # guarantee at this scale) or a real Kafka topic (see
+    # worker/kafka_queue.py and "Scope reductions" in the README). The
+    # IngestionJob row is still created either way -- it's this app's audit
+    # trail / job-status API, not just a work queue.
+    job_queue_backend: str = "postgres"  # "postgres" | "kafka"
+    kafka_bootstrap_servers: str = "kafka:9092"
+    kafka_ingestion_topic: str = "cranus-ingestion-jobs"
+
     # --- Lexical backend: Postgres tsvector (default, zero extra infra) or
     # real OpenSearch BM25 (see retrieval/opensearch_backend.py and
     # "Scope reductions" in the README). Switching doesn't touch anything

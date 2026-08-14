@@ -218,7 +218,7 @@ The report this was built from sketches a larger platform than a single build se
 
 | Report's ideal | This build | Why proportionate here |
 |---|---|---|
-| Kafka streaming bus | Postgres `SELECT ... FOR UPDATE SKIP LOCKED` job queue | A handful of slow-moving connectors don't need a streaming bus |
+| ~~Kafka streaming bus~~ **Implemented (optional)** | Postgres `SELECT ... FOR UPDATE SKIP LOCKED` job queue stays the zero-extra-infra default; `JOB_QUEUE_BACKEND=kafka` dispatches through a real Kafka topic instead (`worker/kafka_queue.py`), live-tested against a real single-node KRaft broker in CI | Closed as an opt-in upgrade path — a handful of slow-moving connectors still don't need a streaming bus running unconditionally; `docker compose --profile kafka up kafka` for local use |
 | Airflow/Prefect/Dagster | A worker polling loop + `ingestion_jobs` table | Ingestion is a linear per-document pipeline, not a fan-out DAG |
 | Iceberg/Delta over object storage | Plain Postgres tables + MinIO for raw bytes only | No big-data-scale analytics requiring time-travel/schema evolution |
 | ~~OpenSearch (true BM25)~~ **Implemented (optional)** | Postgres `tsvector`/`ts_rank_cd` stays the zero-extra-infra default; set `LEXICAL_BACKEND=opensearch` for a real OpenSearch BM25 index instead (`retrieval/opensearch_backend.py`), live-tested against a real OpenSearch in CI | Closed as an opt-in upgrade path rather than a default swap — a handful of documents still don't need a second search engine running unconditionally; `docker compose --profile opensearch up opensearch` for local use |

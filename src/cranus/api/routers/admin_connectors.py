@@ -10,6 +10,7 @@ from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
 from cranus.api.deps import get_db, require_role
+from cranus.common.config import get_settings
 from cranus.common.errors import AccessDeniedError
 from cranus.connectors.registry import get_connector, list_connectors
 from cranus.governance import pep
@@ -61,6 +62,13 @@ def run_connector(
     job = IngestionJob(connector_name=name, params=params)
     db.add(job)
     db.flush()
+
+    if get_settings().job_queue_backend == "kafka":
+        from cranus.worker.kafka_queue import publish_job
+
+        publish_job(job.id, name, params)
+    # else: the row above is enough -- worker/jobs.py's SKIP LOCKED poll picks it up.
+
     return {"job_id": job.id, "status": job.status}
 
 
