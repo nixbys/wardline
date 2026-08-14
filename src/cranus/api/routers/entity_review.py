@@ -8,11 +8,13 @@ from sqlalchemy.orm import Session
 
 from cranus.api.deps import get_db, require_role
 from cranus.graph.entity_resolution import review
+from cranus.graph.entity_resolution.splink_batch import run_batch_resolution
 from cranus.storage.models.entities import Entity
 from cranus.storage.models.governance import ROLE_ADMIN, ROLE_ANALYST, User
 
 router = APIRouter(prefix="/v1/admin/entity-review", tags=["entity-review"])
 _reviewer_role = require_role(ROLE_ADMIN, ROLE_ANALYST)
+_admin_only = require_role(ROLE_ADMIN)
 
 
 class ReviewDecision(BaseModel):
@@ -47,3 +49,17 @@ def decide(
 ) -> dict:
     result = review.decide(db, review_id, body.decision, user.id)
     return {"id": result.id, "status": result.status}
+
+
+@router.post("/batch-resolve")
+def batch_resolve(
+    entity_type: str | None = None,
+    db: Session = Depends(get_db),
+    _user: User = Depends(_admin_only),
+) -> dict:
+    """Run one Splink batch dedupe pass on demand (also runs on the
+    `entity_resolution_batch_interval_seconds` schedule -- see
+    `worker/main.py`). Admin-only: this can queue reviews and merge
+    entities outright above the high-confidence threshold.
+    """
+    return run_batch_resolution(db, entity_type=entity_type)

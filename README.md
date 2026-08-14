@@ -131,6 +131,12 @@ curl http://localhost:8000/v1/admin/entity-review/queue -H "Authorization: Beare
 curl -X POST http://localhost:8000/v1/admin/entity-review/{review_id}/decision \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
   -d '{"decision": "merged"}'   # or "rejected"
+
+# On-demand Splink batch dedupe pass (also runs on entity_resolution_batch_interval_seconds,
+# default 6h — see "Scope reductions" below). Admin-only: can merge outright above the
+# high-confidence threshold, not just queue for review.
+curl -X POST "http://localhost:8000/v1/admin/entity-review/batch-resolve?entity_type=Person" \
+  -H "Authorization: Bearer $KEY"
 ```
 
 ### 5. Admin controls
@@ -219,7 +225,7 @@ The report this was built from sketches a larger platform than a single build se
 | Full ASR pipeline | Not implemented | No audio/video connectors in scope |
 | Cloud/commercial OCR | Local Tesseract | Adequate for typed/scanned filings, not handwriting |
 | Enterprise IAM (OIDC/MFA, Vault/KMS) | Optional OIDC JWT auth mode (see Production readiness) alongside the default API-key system | OIDC path exists but isn't live-tested against a real IdP; MFA is the IdP's responsibility, not this app's |
-| Splink/Dedupe entity resolution | Homemade blocking (metaphone) + scoring (rapidfuzz/jaro-winkler) + clustering (connected components) | Splink is the noted upgrade path if accuracy needs to scale |
+| ~~Splink/Dedupe entity resolution~~ **Implemented (batch)** | The incremental per-mention resolver (blocking/scoring/clustering) still runs at ingestion time — real-time EM training isn't a thing — but a periodic Splink batch pass (`graph/entity_resolution/splink_batch.py`, every `entity_resolution_batch_interval_seconds`, default 6h) now re-examines each entity type with a real DuckDB-backed Fellegi-Sunter comparison engine and merges/queues through the same governance thresholds | Closed for the complementary batch-reconciliation role Splink actually fits; see the module docstring for why match weights are set explicitly rather than EM-trained (small-sample instability) and how to switch to EM once a type has real volume |
 | ~~Dependency-parse relation extraction~~ **Implemented** | spaCy dependency-tree walk (nsubj/nsubjpass/agent/dobj, `conj` coordination, relative-clause antecedents) from trigger tokens, not a keyword-only sentence match | Closed — see `graph/relation_extraction.py`; a narrowly-scoped single-candidate fallback covers the small model's occasional mis-parse of hyphenated "co-founded" without reintroducing the old cartesian-product false positives |
 
 ## The legal boundary

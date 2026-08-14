@@ -37,12 +37,17 @@ def decide(db: Session, review_id: str, decision: str, decided_by: str | None) -
     review.decided_by = decided_by
     review.decided_at = utcnow()
     if decision == "merged":
-        _merge_entities(db, review.entity_a_id, review.entity_b_id)
+        merge_entities(db, review.entity_a_id, review.entity_b_id)
     db.flush()
     return review
 
 
-def _merge_entities(db: Session, keep_id: str, drop_id: str) -> None:
+def merge_entities(db: Session, keep_id: str, drop_id: str) -> None:
+    """Fold `drop_id` into `keep_id`: union aliases, repoint edges/mentions,
+    delete the dropped row. Shared by the human review decision above and
+    the Splink batch pass (`splink_batch.py`) so both merge paths behave
+    identically.
+    """
     keep = db.get(Entity, keep_id)
     drop = db.get(Entity, drop_id)
     if keep is None or drop is None:

@@ -60,6 +60,15 @@ releases, so entries are grouped by work session instead of version number.
   antecedent resolution), with a narrowly-scoped single-candidate fallback for the small model's
   occasional mis-parse of a hyphenated "co-founded". See the updated scope-reductions table.
 
+- `graph/entity_resolution/splink_batch.py`: a periodic Splink batch dedupe pass complementing the
+  incremental per-mention resolver — real DuckDB-backed Fellegi-Sunter comparison instead of a
+  fixed weighted average, re-examining each entity type on a schedule
+  (`entity_resolution_batch_interval_seconds`, default 6h) and catching duplicates the fast
+  incremental path's blocking missed. Decisions flow through the existing merge/review governance
+  (`review.merge_entities`, now public; `review.queue_for_review`). New admin endpoint
+  `POST /v1/admin/entity-review/batch-resolve`. New `tests/integration/` suite (first entry in that
+  previously-empty directory) exercising the full pass against a real Postgres, now also run by CI.
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).

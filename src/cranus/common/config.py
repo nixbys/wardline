@@ -148,6 +148,12 @@ class Settings(BaseSettings):
     agent_max_steps: int = 6
     agent_max_total_tokens: int = 20000
 
+    # --- Entity resolution ---
+    # Periodic Splink batch dedupe pass (graph/entity_resolution/splink_batch.py),
+    # complementing the synchronous per-mention resolver used at ingestion time.
+    entity_resolution_batch_enabled: bool = True
+    entity_resolution_batch_interval_seconds: int = 21600  # 6 hours
+
     # --- Observability ---
     otel_console_export: bool = True
     otel_exporter_otlp_endpoint: str | None = None
