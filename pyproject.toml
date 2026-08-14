@@ -60,6 +60,7 @@ dev = [
   "pytest-asyncio>=0.24",
   "respx>=0.22",
   "testcontainers[postgres]>=4.9",
+  "moto[textract]>=5.0",
   "ruff==0.16.3",
 ]
 

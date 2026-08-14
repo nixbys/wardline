@@ -90,6 +90,14 @@ releases, so entries are grouped by work session instead of version number.
   for local use; CI runs `tests/integration/test_opensearch_backend.py` against a real OpenSearch
   service container.
 
+- `ingestion/extractors/textract_ocr.py`: an optional AWS Textract OCR backend (`OCR_BACKEND=textract`)
+  for scanned PDF pages, the noted upgrade path from local Tesseract for messier scans/handwriting.
+  Local Tesseract stays the default (no external account needed). No AWS account is available in
+  this environment to live-test the actual API, so this is unit-tested against a mocked boto3 client
+  instead: `moto` validates the real botocore call shape is accepted, and a hand-built response
+  validates the LINE-block text-joining logic moto's stub can't exercise. Documented in the README
+  as untested-against-real-AWS, not hidden.
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).

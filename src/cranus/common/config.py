@@ -108,6 +108,15 @@ class Settings(BaseSettings):
     vector_top_k: int = 50
     rrf_k: int = 60
 
+    # --- OCR backend: local Tesseract (default, no external account needed)
+    # or AWS Textract for higher accuracy on messier scans (see
+    # ingestion/extractors/textract_ocr.py and "Scope reductions" in the
+    # README). Textract needs real AWS credentials (boto3's standard chain:
+    # env vars, ~/.aws/credentials, or an IAM role) -- not something this
+    # repo can provide or live-test on its own.
+    ocr_backend: str = "tesseract"  # "tesseract" | "textract"
+    textract_region: str = "us-east-1"
+
     # --- Lexical backend: Postgres tsvector (default, zero extra infra) or
     # real OpenSearch BM25 (see retrieval/opensearch_backend.py and
     # "Scope reductions" in the README). Switching doesn't touch anything
