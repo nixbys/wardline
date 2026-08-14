@@ -118,6 +118,19 @@ releases, so entries are grouped by work session instead of version number.
   satisfied by one broker, so every consumer-group operation fails with `COORDINATOR_NOT_AVAILABLE`
   *silently* (no error surfaced, requests just never complete) until it's set to `1`.
 
+- `ingestion/pipeline.py` orchestrated as a real Prefect flow (the noted Airflow/Prefect/Dagster
+  upgrade path): `run_connector_job` is the parent flow, `ingest_item` runs as a subflow per
+  discovered item (a genuine fan-out shape, addressing the scope-reduction row's own "not a fan-out
+  DAG" justification), and the network/model/DB-touching steps (fetch, persist, index+graph-process)
+  are tasks with automatic retries and backoff. Prefect chosen over Airflow/Dagster specifically
+  because it needs no server for the default case -- an ephemeral local API starts automatically;
+  set `PREFECT_API_URL` for a real server/Cloud. `tests/integration/test_ingestion_pipeline_prefect.py`
+  runs the real flow end-to-end against a real Postgres (using `prefect_test_harness` for isolation),
+  covering both the ingest and duplicate-detection paths. Verified locally against real
+  Postgres/Neo4j/local-blob-storage before pushing -- also surfaced that the local dev `.env`'s
+  `BLOB_BACKEND=s3`/MinIO default hangs badly (DNS+retry backoff) rather than failing fast when MinIO
+  isn't running, unrelated to this change but worth knowing.
+
 ### Security
 - Bumped `pypdf` 6.14.2 → 6.16.0, closing Dependabot alerts #3/#4 (GHSA-fwg2-594c-jp42,
   GHSA-fp3f-mc75-235c: memory/runtime DoS on crafted `/ToUnicode` and CID-width PDF streams).
