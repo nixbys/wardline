@@ -11,7 +11,7 @@ from __future__ import annotations
 
 from moto import mock_aws
 
-from cranus.ingestion.extractors.textract_ocr import _client, ocr_image_via_textract
+from wardline.ingestion.extractors.textract_ocr import _client, ocr_image_via_textract
 
 
 def test_real_botocore_call_shape_is_accepted_by_textract():
@@ -36,7 +36,7 @@ def test_joins_line_blocks_and_ignores_other_block_types(monkeypatch):
                 ]
             }
 
-    import cranus.ingestion.extractors.textract_ocr as mod
+    import wardline.ingestion.extractors.textract_ocr as mod
 
     monkeypatch.setattr(mod, "_client", lambda: _FakeClient())
     result = ocr_image_via_textract(b"fake-png-bytes")

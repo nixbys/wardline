@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "cranus"
+name = "wardline"
 version = "0.1.0"
 description = "Lawful OSINT + AI research platform: hybrid RAG + knowledge graph over public/licensed/consented sources."
 requires-python = ">=3.12,<3.13"
@@ -53,11 +53,13 @@ dependencies = [
   "pyarrow>=17.0",
   "python-multipart>=0.0.17",
   "argon2-cffi>=23.1",
+  "pyotp>=2.9",
+  "stripe>=11.1",
   "datasketch>=1.6",
 ]
 
 [project.scripts]
-cranus = "cranus.cli:app"
+wardline = "wardline.cli:app"
 
 [project.optional-dependencies]
 dev = [
@@ -70,7 +72,7 @@ dev = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/cranus"]
+packages = ["src/wardline"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -6,7 +6,51 @@ releases, so entries are grouped by work session instead of version number.
 
 ## [Unreleased]
 
+### Changed
+- Genericized LLM backend config: `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL` → `LLM_API_KEY`/`LLM_MODEL`,
+  plus a new `LLM_PROVIDER` setting (`query/llm_client.py`'s `get_llm_client()` now dispatches on
+  it). Still calls the same Anthropic API by default — this only stops hard-coding the vendor name
+  into public-facing settings/docs, and means adding a second provider later is a new branch, not
+  a rename.
+- Renamed the project from "cranus" to "Wardline" — package (`src/cranus` → `src/wardline`), CLI entry point,
+  Docker images/compose service defaults, env var defaults, and every doc. `git log` and the one already-applied
+  migration (`migrations/versions/0001_initial_schema.py`, which still creates a Postgres function named
+  `cranus_to_tsvector` — deliberately not edited retroactively, see README) still carry the old name, on purpose.
+  Chosen after an informal collision screen turned up active, unrelated companies already using several other
+  candidates — not a substitute for a real trademark search before committing marketing spend.
+
 ### Added
+- Billing (commercialization roadmap Phase 1 / Pillar 5): `common/plans.py` (Free/Pro/Team/Enterprise,
+  placeholder prices — the one place a real number needs to change), `governance/billing.py` (Stripe
+  Checkout + customer portal + webhook state machine, `BILLING_MODE=mock` activates a plan locally
+  with zero Stripe calls, matching this project's mock/live convention), `governance/entitlements.py`
+  (query-mode gating + `max_sources` cap by plan, enforced in `POST /v1/query` before anything runs),
+  new `subscriptions` table (migration `0005_billing.py`), `api/routers/billing.py` (`/v1/billing/
+  {plans, subscription, checkout, portal, webhook}`). New web pages: `pricing.html` (reads plan data
+  live from the API, never a hard-coded copy) plus a billing section in `app.html`'s settings modal.
+- Self-serve accounts (commercialization roadmap Phase 0 / Pillar 1): `POST /v1/auth/{signup,
+  verify-email, login, logout, password/forgot, password/reset, mfa/enroll, mfa/confirm,
+  mfa/disable, accept-invite}` + `GET /v1/auth/me` (`governance/accounts.py`, `governance/mfa.py`,
+  `api/routers/auth.py`), plus `POST /v1/admin/users/invite` for admin-issued teammate invites.
+  TOTP MFA with recovery-code backup (`pyotp`). A successful login mints a normal `ApiKey` row
+  tagged `scopes=["session"]` rather than a parallel session system — `get_current_user`, RBAC,
+  the kill switch, and the audit log all keep working unchanged. New `password_hash`,
+  `email_verified_at`, `mfa_secret`, `mfa_enabled` columns on `users`, plus `auth_tokens` and
+  `recovery_codes` tables (migration `0004_accounts.py`). Outbound email via `common/email.py`
+  (`EMAIL_MODE=mock` logs instead of sending, matching this project's `LLM_CLIENT_MODE=mock`
+  convention; `EMAIL_MODE=smtp` sends for real against any standard provider). New web pages:
+  `login.html`, `verify-email.html`, `reset-password.html`, `accept-invite.html`, plus an MFA
+  management panel in `app.html`'s settings modal.
+- Two engagement-scoped dual-use connectors — `shodan` (`connectors/threat_intel.py`, passive
+  exposure lookup) and `nmap` (`connectors/nmap_scan.py`, active scan, run in a new isolated
+  `toolrunner` sidecar container — `docker/toolrunner/`, optional `--profile toolrunner`) — the
+  first connectors to actually use `requires_engagement`/`enforce_engagement_scope`, previously
+  scaffolding with nothing behind it. Both tagged `internal-only` (ABAC), inspired by (not
+  vendored from — kept at arm's length specifically to avoid AGPL scope creep) Odysseus Red's
+  tool categories. `governance.engagements.target_in_scope` now understands CIDR ranges, not just
+  domain suffixes, since infra engagements are routinely scoped to a network block.
+- `docs/COMMERCIALIZATION_ROADMAP.md`: production/accounts/encryption/go-to-market plan, written
+  against this repo's actual state rather than a generic SaaS checklist.
 - Production hardening: non-root container users, `.dockerignore`, security response headers,
   an explicit unhandled-exception handler that logs full detail server-side but never leaks it to
   clients, a bounded-read upload size limit (`UPLOAD_MAX_BYTES`, default 50 MiB), and
@@ -172,7 +216,7 @@ and every bug found and fixed during live verification):
   Reciprocal Rank Fusion, reranked with a local cross-encoder.
 - **Knowledge & fusion**: spaCy NER, rule-based relation extraction, entity resolution (blocking →
   scoring → clustering → human review), Neo4j sync.
-- **Query plane**: RAG pipeline (mock or live Claude synthesis) and a bounded agentic research mode,
+- **Query plane**: RAG pipeline (mock or live LLM synthesis) and a bounded agentic research mode,
   both citation-verified before returning.
 - **Governance & security**: bearer-token auth, RBAC + ABAC, admin kill switch, DB-trigger-enforced
   immutable audit log, rate limiting.

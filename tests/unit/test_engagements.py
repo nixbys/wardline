@@ -2,10 +2,10 @@ from datetime import UTC, datetime, timedelta
 
 import pytest
 
-from cranus.common.errors import AccessDeniedError
-from cranus.governance import pep
-from cranus.governance.engagements import is_active, target_in_scope
-from cranus.storage.models.engagements import Engagement
+from wardline.common.errors import AccessDeniedError
+from wardline.governance import pep
+from wardline.governance.engagements import is_active, target_in_scope
+from wardline.storage.models.engagements import Engagement
 
 
 def _engagement(**overrides) -> Engagement:
@@ -38,6 +38,23 @@ def test_target_in_scope_rejects_unrelated_domain():
 
 def test_target_in_scope_rejects_suffix_spoof():
     assert not target_in_scope("acme.com", "acme.com.evil.example")
+
+
+def test_target_in_scope_cidr_contains_address():
+    assert target_in_scope("10.0.0.0/24", "10.0.0.5")
+
+
+def test_target_in_scope_cidr_rejects_out_of_range_address():
+    assert not target_in_scope("10.0.0.0/24", "10.0.1.5")
+
+
+def test_target_in_scope_single_ip_is_the_slash_32_case():
+    assert target_in_scope("203.0.113.7", "203.0.113.7")
+    assert not target_in_scope("203.0.113.7", "203.0.113.8")
+
+
+def test_target_in_scope_cidr_rejects_non_ip_request():
+    assert not target_in_scope("10.0.0.0/24", "not-an-ip")
 
 
 def test_is_active_true_within_window():

@@ -1,4 +1,4 @@
-from cranus.ingestion.chunking import chunk_text
+from wardline.ingestion.chunking import chunk_text
 
 
 def test_empty_text_returns_no_chunks():

@@ -1,4 +1,4 @@
-# Contributing to cranus
+# Contributing to wardline
 
 ## Dev environment
 

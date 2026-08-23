@@ -13,7 +13,7 @@ OUT="$(pwd)/backups/${STAMP}"
 mkdir -p "${OUT}/minio"
 
 echo "==> Postgres (pg_dump, online)"
-$COMPOSE exec -T postgres pg_dump -U "${POSTGRES_USER:-cranus}" -d "${POSTGRES_DB:-cranus}" \
+$COMPOSE exec -T postgres pg_dump -U "${POSTGRES_USER:-wardline}" -d "${POSTGRES_DB:-wardline}" \
   --format=custom > "${OUT}/postgres.dump"
 
 echo "==> Neo4j (neo4j-admin dump, requires brief downtime)"
@@ -29,8 +29,8 @@ $COMPOSE cp neo4j:/data/dumps/neo4j.dump "${OUT}/neo4j.dump"
 
 echo "==> MinIO (mc mirror, online)"
 $COMPOSE run --rm -v "${OUT}/minio:/backup" --entrypoint /bin/sh minio-init -c "
-  mc alias set backup-source http://minio:9000 ${S3_ACCESS_KEY:-cranus} ${S3_SECRET_KEY:-cranus-dev-secret} &&
-  mc mirror backup-source/${S3_BUCKET:-cranus-bronze} /backup
+  mc alias set backup-source http://minio:9000 ${S3_ACCESS_KEY:-wardline} ${S3_SECRET_KEY:-wardline-dev-secret} &&
+  mc mirror backup-source/${S3_BUCKET:-wardline-bronze} /backup
 "
 
 echo "==> Done: ${OUT}"
