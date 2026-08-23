@@ -1,6 +1,6 @@
-from cranus.graph.entity_resolution.blocking import block_key
-from cranus.graph.entity_resolution.clustering import cluster_pairs
-from cranus.graph.entity_resolution.scoring import score_pair
+from wardline.graph.entity_resolution.blocking import block_key
+from wardline.graph.entity_resolution.clustering import cluster_pairs
+from wardline.graph.entity_resolution.scoring import score_pair
 
 
 def test_exact_name_match_scores_near_one_with_no_attributes():

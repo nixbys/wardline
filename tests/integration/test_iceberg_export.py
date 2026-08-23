@@ -13,9 +13,9 @@ import uuid
 
 import pytest
 
-from cranus.storage.db import sync_session
-from cranus.storage.iceberg_export import _FULL_TABLE, _catalog, export_audit_events
-from cranus.storage.models.governance import AuditEvent
+from wardline.storage.db import sync_session
+from wardline.storage.iceberg_export import _FULL_TABLE, _catalog, export_audit_events
+from wardline.storage.models.governance import AuditEvent
 
 
 @pytest.fixture

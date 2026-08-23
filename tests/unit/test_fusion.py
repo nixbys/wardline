@@ -1,5 +1,5 @@
-from cranus.retrieval.fusion import rrf_merge
-from cranus.retrieval.lexical import RetrievedChunk
+from wardline.retrieval.fusion import rrf_merge
+from wardline.retrieval.lexical import RetrievedChunk
 
 
 def _chunk(cid: str) -> RetrievedChunk:

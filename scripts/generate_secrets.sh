@@ -9,6 +9,7 @@ rand() { openssl rand -base64 "$1" | tr -d '\n=+/' | head -c "$2"; }
 
 cat <<EOF
 API_KEY_PEPPER=$(rand 48 48)
+PASSWORD_PEPPER=$(rand 48 48)
 POSTGRES_PASSWORD=$(rand 32 32)
 NEO4J_PASSWORD=$(rand 32 32)
 S3_SECRET_KEY=$(rand 32 32)

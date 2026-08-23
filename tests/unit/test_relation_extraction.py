@@ -1,5 +1,5 @@
-from cranus.graph.ner import Mention
-from cranus.graph.relation_extraction import extract_relations
+from wardline.graph.ner import Mention
+from wardline.graph.relation_extraction import extract_relations
 
 
 def _mention(text: str, needle: str, ner_type: str, occurrence: int = 0) -> Mention:

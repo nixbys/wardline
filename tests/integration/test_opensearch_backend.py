@@ -26,10 +26,10 @@ def opensearch_index(monkeypatch):
     """Points opensearch_backend at a throwaway index for this test only, so
     it can't collide with (or be polluted by) any other test run.
     """
-    from cranus.common.config import get_settings
-    from cranus.retrieval import opensearch_backend
+    from wardline.common.config import get_settings
+    from wardline.retrieval import opensearch_backend
 
-    index_name = f"cranus-chunks-test-{uuid.uuid4().hex[:8]}"
+    index_name = f"wardline-chunks-test-{uuid.uuid4().hex[:8]}"
     monkeypatch.setenv("OPENSEARCH_INDEX", index_name)
     get_settings.cache_clear()
     opensearch_backend._client.cache_clear()
@@ -44,7 +44,7 @@ def opensearch_index(monkeypatch):
 
 
 def test_index_and_search_real_bm25_ranking(opensearch_index):
-    from cranus.retrieval.opensearch_backend import index_chunk, lexical_search_opensearch
+    from wardline.retrieval.opensearch_backend import index_chunk, lexical_search_opensearch
 
     index_chunk("c1", "d1", "Acme Corp was founded by Carol in 2010.", "en", "active", datetime(2020, 1, 1, tzinfo=UTC))
     index_chunk("c2", "d1", "Beta Inc makes widgets in a factory.", "en", "active", datetime(2021, 1, 1, tzinfo=UTC))
@@ -56,7 +56,7 @@ def test_index_and_search_real_bm25_ranking(opensearch_index):
 
 
 def test_filters_are_applied(opensearch_index):
-    from cranus.retrieval.opensearch_backend import index_chunk, lexical_search_opensearch
+    from wardline.retrieval.opensearch_backend import index_chunk, lexical_search_opensearch
 
     index_chunk("c1", "d1", "Acme Corp was founded by Carol in 2010.", "en", "active", datetime(2020, 1, 1, tzinfo=UTC))
 
@@ -70,15 +70,15 @@ def test_lexical_search_dispatches_to_opensearch_when_configured(opensearch_inde
     app actually calls -- must route to OpenSearch when configured, with no
     other code change needed downstream (fusion, rerank, API).
     """
-    from cranus.common.config import get_settings
-    from cranus.retrieval.opensearch_backend import index_chunk
+    from wardline.common.config import get_settings
+    from wardline.retrieval.opensearch_backend import index_chunk
 
     monkeypatch.setenv("LEXICAL_BACKEND", "opensearch")
     get_settings.cache_clear()
     try:
         index_chunk("c1", "d1", "Acme Corp was founded by Carol.", "en", "active", None)
 
-        from cranus.retrieval.lexical import lexical_search
+        from wardline.retrieval.lexical import lexical_search
 
         results = lexical_search(db=None, query="Acme Corp founded")  # db unused on this path
         assert [r.chunk_id for r in results] == ["c1"]

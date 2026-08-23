@@ -1,4 +1,4 @@
-from cranus.ingestion.quality_gates import check_document
+from wardline.ingestion.quality_gates import check_document
 
 
 def test_empty_text_fails():
