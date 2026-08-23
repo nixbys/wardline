@@ -1,0 +1,138 @@
+/*
+ * Design tokens.
+ *
+ * Monochrome black / white / transparent scheme — dark-first, glass
+ * surfaces (translucent panels + backdrop blur) instead of colored
+ * cards. The only color left in the system is semantic (danger/success/
+ * warning); everything interactive or brand-related is pure white/black
+ * plus alpha, following the Flux-style small-radius, quiet-border
+ * component vocabulary from before.
+ *
+ * Dark is the default look (declared on bare :root), not a
+ * prefers-color-scheme add-on — this file is dark-first by design. The
+ * light palette is redeclared twice: once under prefers-color-scheme for
+ * users who never touch the toggle, once under [data-theme="light"] so
+ * the explicit toggle in theme.js always wins regardless of OS setting.
+ */
+
+:root {
+  --bg-canvas: #050505;
+  --bg-elevated: rgba(255, 255, 255, 0.055);
+  --bg-subtle: rgba(255, 255, 255, 0.035);
+  --bg-sidebar: rgba(255, 255, 255, 0.02);
+  --bg-overlay: rgba(0, 0, 0, 0.65);
+
+  --border: rgba(255, 255, 255, 0.1);
+  --border-strong: rgba(255, 255, 255, 0.18);
+
+  --text-primary: #f5f5f5;
+  --text-secondary: rgba(245, 245, 245, 0.62);
+  --text-tertiary: rgba(245, 245, 245, 0.38);
+  --text-on-accent: #050505;
+
+  --accent: #ffffff;
+  --accent-hover: #d4d4d4;
+  --accent-subtle: rgba(255, 255, 255, 0.14);
+  --accent-subtle-text: #ffffff;
+  --focus-ring: rgba(255, 255, 255, 0.35);
+
+  --danger: #ff6b6a;
+  --danger-subtle: rgba(255, 107, 106, 0.14);
+  --success: #33d17a;
+  --success-subtle: rgba(51, 209, 122, 0.14);
+  --warning: #f0b429;
+  --warning-subtle: rgba(240, 180, 41, 0.14);
+
+  --radius-sm: 6px;
+  --radius-md: 10px;
+  --radius-lg: 16px;
+  --radius-xl: 22px;
+  --radius-full: 999px;
+
+  --glass-blur: 20px;
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.4), 0 1px 2px rgba(0, 0, 0, 0.28);
+  --shadow-md: 0 4px 18px rgba(0, 0, 0, 0.45), 0 2px 6px rgba(0, 0, 0, 0.3);
+  --shadow-lg: 0 18px 52px rgba(0, 0, 0, 0.6), 0 4px 14px rgba(0, 0, 0, 0.35);
+
+  --font-sans:
+    -apple-system, BlinkMacSystemFont, "Segoe UI", Inter, "Helvetica Neue", Arial, sans-serif;
+  --font-serif: "Iowan Old Style", "Palatino Linotype", Palatino, ui-serif, Georgia, serif;
+  --font-mono: ui-monospace, "SF Mono", "Cascadia Code", Menlo, Consolas, monospace;
+
+  --container-max: 1120px;
+  --sidebar-width: 272px;
+  --transition-fast: 120ms ease;
+  --transition-base: 200ms ease;
+}
+
+@media (prefers-color-scheme: light) {
+  :root:not([data-theme="dark"]) {
+    --bg-canvas: #ffffff;
+    --bg-elevated: rgba(0, 0, 0, 0.025);
+    --bg-subtle: rgba(0, 0, 0, 0.035);
+    --bg-sidebar: rgba(0, 0, 0, 0.02);
+    --bg-overlay: rgba(0, 0, 0, 0.35);
+
+    --border: rgba(0, 0, 0, 0.1);
+    --border-strong: rgba(0, 0, 0, 0.18);
+
+    --text-primary: #0a0a0a;
+    --text-secondary: rgba(10, 10, 10, 0.64);
+    --text-tertiary: rgba(10, 10, 10, 0.42);
+    --text-on-accent: #ffffff;
+
+    --accent: #0a0a0a;
+    --accent-hover: #2b2b2b;
+    --accent-subtle: rgba(10, 10, 10, 0.08);
+    --accent-subtle-text: #0a0a0a;
+    --focus-ring: rgba(10, 10, 10, 0.28);
+
+    --danger: #d3352f;
+    --danger-subtle: rgba(211, 53, 47, 0.1);
+    --success: #1f8f4e;
+    --success-subtle: rgba(31, 143, 78, 0.1);
+    --warning: #a2680c;
+    --warning-subtle: rgba(162, 104, 12, 0.12);
+
+    --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
+    --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+    --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+    --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+  }
+}
+
+:root[data-theme="light"] {
+  --bg-canvas: #ffffff;
+  --bg-elevated: rgba(0, 0, 0, 0.025);
+  --bg-subtle: rgba(0, 0, 0, 0.035);
+  --bg-sidebar: rgba(0, 0, 0, 0.02);
+  --bg-overlay: rgba(0, 0, 0, 0.35);
+
+  --border: rgba(0, 0, 0, 0.1);
+  --border-strong: rgba(0, 0, 0, 0.18);
+
+  --text-primary: #0a0a0a;
+  --text-secondary: rgba(10, 10, 10, 0.64);
+  --text-tertiary: rgba(10, 10, 10, 0.42);
+  --text-on-accent: #ffffff;
+
+  --accent: #0a0a0a;
+  --accent-hover: #2b2b2b;
+  --accent-subtle: rgba(10, 10, 10, 0.08);
+  --accent-subtle-text: #0a0a0a;
+  --focus-ring: rgba(10, 10, 10, 0.28);
+
+  --danger: #d3352f;
+  --danger-subtle: rgba(211, 53, 47, 0.1);
+  --success: #1f8f4e;
+  --success-subtle: rgba(31, 143, 78, 0.1);
+  --warning: #a2680c;
+  --warning-subtle: rgba(162, 104, 12, 0.12);
+
+  --shadow-xs: 0 1px 2px rgba(0, 0, 0, 0.06);
+  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08), 0 1px 2px rgba(0, 0, 0, 0.05);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.1), 0 2px 6px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 12px 40px rgba(0, 0, 0, 0.16), 0 4px 12px rgba(0, 0, 0, 0.08);
+}
