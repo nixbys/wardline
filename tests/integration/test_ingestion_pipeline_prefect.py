@@ -15,10 +15,10 @@ from datetime import UTC, datetime
 import pytest
 from prefect.testing.utilities import prefect_test_harness
 
-from cranus.connectors.base import Connector, ParsedDocument, RawObject, SourceItem
-from cranus.ingestion.pipeline import ingest_item, run_connector_job
-from cranus.storage.db import get_sync_sessionmaker
-from cranus.storage.models.documents import Document
+from wardline.connectors.base import Connector, ParsedDocument, RawObject, SourceItem
+from wardline.ingestion.pipeline import ingest_item, run_connector_job
+from wardline.storage.db import get_sync_sessionmaker
+from wardline.storage.models.documents import Document
 
 
 class _FakeConnector(Connector):

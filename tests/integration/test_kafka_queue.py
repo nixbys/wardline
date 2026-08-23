@@ -25,10 +25,10 @@ pytestmark = pytest.mark.skipif(
 @pytest.fixture
 def kafka_topic(monkeypatch):
     """Points kafka_queue at a throwaway topic for this test only."""
-    from cranus.common.config import get_settings
-    from cranus.worker import kafka_queue
+    from wardline.common.config import get_settings
+    from wardline.worker import kafka_queue
 
-    topic = f"cranus-test-jobs-{uuid.uuid4().hex[:8]}"
+    topic = f"wardline-test-jobs-{uuid.uuid4().hex[:8]}"
     monkeypatch.setenv("KAFKA_INGESTION_TOPIC", topic)
     get_settings.cache_clear()
     kafka_queue._producer.cache_clear()
@@ -40,7 +40,7 @@ def kafka_topic(monkeypatch):
 
 
 def test_publish_and_consume_one_job(kafka_topic):
-    from cranus.worker.kafka_queue import consume_forever, publish_job
+    from wardline.worker.kafka_queue import consume_forever, publish_job
 
     publish_job("job_abc123", "wikipedia", {"search": "Acme Corp"})
 

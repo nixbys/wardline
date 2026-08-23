@@ -1,4 +1,4 @@
-from cranus.common.security import generate_api_key, lookup_key_for_index, verify_api_key
+from wardline.common.security import generate_api_key, lookup_key_for_index, verify_api_key
 
 
 def test_generated_key_verifies_against_its_own_hash():

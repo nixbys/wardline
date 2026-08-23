@@ -16,12 +16,12 @@ RUN pip install --no-cache-dir -e ".[dev]" \
     && python -m spacy download en_core_web_sm
 
 ENV PYTHONUNBUFFERED=1 \
-    HOME=/home/cranus
+    HOME=/home/wardline
 
 # Non-root: same rationale as Dockerfile.api. The worker also downloads the
 # HF model cache lazily, so HOME must be owned by this user.
-RUN useradd --create-home --home-dir /home/cranus --shell /usr/sbin/nologin cranus \
-    && chown -R cranus:cranus /app
-USER cranus
+RUN useradd --create-home --home-dir /home/wardline --shell /usr/sbin/nologin wardline \
+    && chown -R wardline:wardline /app
+USER wardline
 
-CMD ["python", "-m", "cranus.worker.main"]
+CMD ["python", "-m", "wardline.worker.main"]

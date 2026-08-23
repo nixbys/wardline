@@ -1,4 +1,4 @@
-from cranus.query.verify import verify_citations
+from wardline.query.verify import verify_citations
 
 
 def test_empty_answer_is_insufficient_evidence():
