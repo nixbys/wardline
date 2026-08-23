@@ -5,8 +5,8 @@ from logging.config import fileConfig
 from alembic import context
 from sqlalchemy import engine_from_config, pool
 
-from cranus.common.config import get_settings
-from cranus.storage.models import Base
+from wardline.common.config import get_settings
+from wardline.storage.models import Base
 
 config = context.config
 if config.config_file_name is not None:

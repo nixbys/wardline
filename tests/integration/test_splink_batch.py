@@ -15,10 +15,10 @@ from __future__ import annotations
 
 import pytest
 
-from cranus.graph.entity_resolution.review import list_pending
-from cranus.graph.entity_resolution.splink_batch import run_batch_resolution
-from cranus.storage.db import get_sync_sessionmaker
-from cranus.storage.models.entities import Entity
+from wardline.graph.entity_resolution.review import list_pending
+from wardline.graph.entity_resolution.splink_batch import run_batch_resolution
+from wardline.storage.db import get_sync_sessionmaker
+from wardline.storage.models.entities import Entity
 
 
 @pytest.fixture

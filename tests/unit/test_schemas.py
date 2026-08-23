@@ -3,7 +3,7 @@ report's Section 5.3 data models specify, so drift from the spec is caught
 in review rather than discovered later.
 """
 
-from cranus.common.schemas import Chunk, Citation, Document, Edge, Entity, QuerySession
+from wardline.common.schemas import Chunk, Citation, Document, Edge, Entity, QuerySession
 
 
 def _fields(model) -> set[str]:

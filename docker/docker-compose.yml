@@ -8,9 +8,9 @@ services:
     image: pgvector/pgvector:pg16
     restart: unless-stopped
     environment:
-      POSTGRES_USER: ${POSTGRES_USER:-cranus}
-      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cranus}
-      POSTGRES_DB: ${POSTGRES_DB:-cranus}
+      POSTGRES_USER: ${POSTGRES_USER:-wardline}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-wardline}
+      POSTGRES_DB: ${POSTGRES_DB:-wardline}
     volumes:
       - pgdata:/var/lib/postgresql/data
       - ./init/postgres-init.sql:/docker-entrypoint-initdb.d/01-init.sql:ro,Z
@@ -21,7 +21,7 @@ services:
     ports:
       - "127.0.0.1:5432:5432"
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cranus} -d ${POSTGRES_DB:-cranus}"]
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-wardline} -d ${POSTGRES_DB:-wardline}"]
       interval: 5s
       timeout: 5s
       retries: 10
@@ -32,7 +32,7 @@ services:
     image: neo4j:5-community
     restart: unless-stopped
     environment:
-      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-cranus-dev-password}
+      NEO4J_AUTH: ${NEO4J_USER:-neo4j}/${NEO4J_PASSWORD:-wardline-dev-password}
       NEO4J_PLUGINS: '[]'
     volumes:
       - neo4j_data:/data
@@ -55,8 +55,8 @@ services:
     restart: unless-stopped
     command: server /data --console-address ":9001"
     environment:
-      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-cranus}
-      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-cranus-dev-secret}
+      MINIO_ROOT_USER: ${S3_ACCESS_KEY:-wardline}
+      MINIO_ROOT_PASSWORD: ${S3_SECRET_KEY:-wardline-dev-secret}
     volumes:
       - minio_data:/data
     # See postgres comment above re: localhost-only binding.
@@ -78,8 +78,8 @@ services:
         condition: service_healthy
     entrypoint: >
       /bin/sh -c "
-      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-cranus} ${S3_SECRET_KEY:-cranus-dev-secret} &&
-      mc mb -p local/${S3_BUCKET:-cranus-bronze} || true
+      mc alias set local http://minio:9000 ${S3_ACCESS_KEY:-wardline} ${S3_SECRET_KEY:-wardline-dev-secret} &&
+      mc mb -p local/${S3_BUCKET:-wardline-bronze} || true
       "
 
   migrator:
@@ -239,11 +239,32 @@ services:
       # consumer-group operation fails with COORDINATOR_NOT_AVAILABLE
       # forever (silently) without this.
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-      CLUSTER_ID: cranus-dev-cluster-id
+      CLUSTER_ID: wardline-dev-cluster-id
     ports:
       - "127.0.0.1:9092:9092"
     mem_limit: 1g
     cpus: 1.0
+
+  # Optional active-scan sidecar (toolrunner/), the execution backend for
+  # wardline.connectors.nmap_scan. Not started by default -- `docker compose
+  # --profile toolrunner up toolrunner`, then set TOOLRUNNER_URL=
+  # http://toolrunner:8090 and a real TOOLRUNNER_TOKEN in .env. Every
+  # request this service accepts still had to already clear
+  # governance.pep.enforce_engagement_scope upstream in the api container --
+  # this sidecar exists only to isolate the scanning *capability* (nmap
+  # needs socket access this app's other containers should never have), not
+  # to re-decide authorization; see toolrunner/app.py's module docstring.
+  # No host port published: reachable only from the worker container that
+  # actually runs ingestion jobs.
+  toolrunner:
+    build:
+      context: ./toolrunner
+    profiles: ["toolrunner"]
+    restart: unless-stopped
+    environment:
+      TOOLRUNNER_TOKEN: ${TOOLRUNNER_TOKEN:?set a real TOOLRUNNER_TOKEN in .env before enabling this profile}
+    mem_limit: 256m
+    cpus: 0.5
 
 volumes:
   pgdata:

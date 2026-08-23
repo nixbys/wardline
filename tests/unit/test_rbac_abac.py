@@ -1,8 +1,8 @@
 import pytest
 
-from cranus.common.errors import AccessDeniedError
-from cranus.governance import abac, rbac
-from cranus.storage.models.governance import ROLE_ADMIN, ROLE_ANALYST, ROLE_VIEWER, User
+from wardline.common.errors import AccessDeniedError
+from wardline.governance import abac, rbac
+from wardline.storage.models.governance import ROLE_ADMIN, ROLE_ANALYST, ROLE_VIEWER, User
 
 
 def _user(role: str) -> User:

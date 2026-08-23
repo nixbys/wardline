@@ -20,8 +20,8 @@ import uuid
 import httpx
 import pytest
 
-from cranus.api.oidc_auth import OidcAuthError, validate_token
-from cranus.common.config import Settings
+from wardline.api.oidc_auth import OidcAuthError, validate_token
+from wardline.common.config import Settings
 
 KEYCLOAK_BASE_URL = os.environ.get("KEYCLOAK_BASE_URL")
 pytestmark = pytest.mark.skipif(
@@ -37,8 +37,8 @@ def keycloak_client_credentials():
     `oidc_auth.validate_token` sees from any real IdP.
     """
     base = KEYCLOAK_BASE_URL
-    realm = f"cranus-test-{uuid.uuid4().hex[:8]}"
-    client_id = "cranus-svc-client"
+    realm = f"wardline-test-{uuid.uuid4().hex[:8]}"
+    client_id = "wardline-svc-client"
     client_secret = "svc-secret"
 
     # The master realm's own sslRequired policy (unrelated to the throwaway

@@ -14,7 +14,7 @@ read -r -p "This overwrites the current Postgres/Neo4j/MinIO data with the backu
 [ "$CONFIRM" = "yes" ] || { echo "Aborted."; exit 1; }
 
 echo "==> Postgres"
-$COMPOSE exec -T postgres pg_restore -U "${POSTGRES_USER:-cranus}" -d "${POSTGRES_DB:-cranus}" \
+$COMPOSE exec -T postgres pg_restore -U "${POSTGRES_USER:-wardline}" -d "${POSTGRES_DB:-wardline}" \
   --clean --if-exists < "${IN}/postgres.dump"
 
 echo "==> Neo4j (requires downtime)"
@@ -26,8 +26,8 @@ $COMPOSE start neo4j
 
 echo "==> MinIO"
 $COMPOSE run --rm -v "${IN}/minio:/backup" --entrypoint /bin/sh minio-init -c "
-  mc alias set restore-target http://minio:9000 ${S3_ACCESS_KEY:-cranus} ${S3_SECRET_KEY:-cranus-dev-secret} &&
-  mc mirror /backup restore-target/${S3_BUCKET:-cranus-bronze}
+  mc alias set restore-target http://minio:9000 ${S3_ACCESS_KEY:-wardline} ${S3_SECRET_KEY:-wardline-dev-secret} &&
+  mc mirror /backup restore-target/${S3_BUCKET:-wardline-bronze}
 "
 
 echo "==> Done. Restart api/worker so any in-memory caches pick up the restored state:"

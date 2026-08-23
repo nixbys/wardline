@@ -11,7 +11,7 @@ from __future__ import annotations
 import io
 import wave
 
-from cranus.ingestion.extractors.audio import transcribe_audio
+from wardline.ingestion.extractors.audio import transcribe_audio
 
 
 def _make_wav_bytes(seconds: float = 1.0, sample_rate: int = 16000) -> bytes:

@@ -18,20 +18,20 @@ RUN pip install --no-cache-dir -e ".[dev]" \
     && python -m spacy download en_core_web_sm
 
 ENV PYTHONUNBUFFERED=1 \
-    HOME=/home/cranus
+    HOME=/home/wardline
 
 # Non-root: limits blast radius if the process is ever compromised (RCE in a
 # dependency, SSRF-driven arbitrary read, etc.) to what this user can reach,
 # not full container root. /app and HOME must be owned by the user since the
 # app writes here at runtime (local blob store fallback, HF model cache for
 # sentence-transformers/cross-encoder, which download lazily on first use).
-RUN useradd --create-home --home-dir /home/cranus --shell /usr/sbin/nologin cranus \
-    && chown -R cranus:cranus /app
-USER cranus
+RUN useradd --create-home --home-dir /home/wardline --shell /usr/sbin/nologin wardline \
+    && chown -R wardline:wardline /app
+USER wardline
 
 EXPOSE 8000
 
 HEALTHCHECK --interval=10s --timeout=5s --start-period=20s --retries=5 \
     CMD curl -f http://localhost:8000/healthz || exit 1
 
-CMD ["uvicorn", "cranus.api.main:app", "--host", "0.0.0.0", "--port", "8000"]
+CMD ["uvicorn", "wardline.api.main:app", "--host", "0.0.0.0", "--port", "8000"]

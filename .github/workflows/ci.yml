@@ -22,17 +22,17 @@ jobs:
       postgres:
         image: pgvector/pgvector:pg16
         env:
-          POSTGRES_USER: cranus
-          POSTGRES_PASSWORD: cranus
-          POSTGRES_DB: cranus
+          POSTGRES_USER: wardline
+          POSTGRES_PASSWORD: wardline
+          POSTGRES_DB: wardline
         ports: ["5432:5432"]
         options: >-
-          --health-cmd "pg_isready -U cranus -d cranus"
+          --health-cmd "pg_isready -U wardline -d wardline"
           --health-interval 5s --health-timeout 5s --health-retries 10
       neo4j:
         image: neo4j:5-community
         env:
-          NEO4J_AUTH: neo4j/cranus-dev-password
+          NEO4J_AUTH: neo4j/wardline-dev-password
         ports: ["7687:7687", "7474:7474"]
         options: >-
           --health-cmd "wget -q --spider http://localhost:7474 || exit 1"
@@ -65,7 +65,7 @@ jobs:
           # consumer-group operation fails with COORDINATOR_NOT_AVAILABLE
           # forever (silently) without this.
           KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
-          CLUSTER_ID: cranus-ci-cluster-id
+          CLUSTER_ID: wardline-ci-cluster-id
         ports: ["9092:9092"]
     steps:
       - uses: actions/checkout@v7
@@ -79,9 +79,9 @@ jobs:
       - name: Run migrations
         env:
           POSTGRES_HOST: localhost
-          POSTGRES_USER: cranus
-          POSTGRES_PASSWORD: cranus
-          POSTGRES_DB: cranus
+          POSTGRES_USER: wardline
+          POSTGRES_PASSWORD: wardline
+          POSTGRES_DB: wardline
         run: alembic upgrade head
       - name: Start Keycloak (live IdP for the OIDC integration test)
         # Not a `services:` container: the official image needs a `start-dev`
@@ -99,11 +99,11 @@ jobs:
       - name: Run tests
         env:
           POSTGRES_HOST: localhost
-          POSTGRES_USER: cranus
-          POSTGRES_PASSWORD: cranus
-          POSTGRES_DB: cranus
+          POSTGRES_USER: wardline
+          POSTGRES_PASSWORD: wardline
+          POSTGRES_DB: wardline
           NEO4J_URI: bolt://localhost:7687
-          NEO4J_PASSWORD: cranus-dev-password
+          NEO4J_PASSWORD: wardline-dev-password
           API_KEY_PEPPER: ci-test-pepper-not-for-production
           KEYCLOAK_BASE_URL: http://localhost:8090
           OPENSEARCH_URL: http://localhost:9200
@@ -116,6 +116,6 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - name: Build api image
-        run: docker build -f docker/Dockerfile.api -t cranus-api:ci .
+        run: docker build -f docker/Dockerfile.api -t wardline-api:ci .
       - name: Build worker image
-        run: docker build -f docker/Dockerfile.worker -t cranus-worker:ci .
+        run: docker build -f docker/Dockerfile.worker -t wardline-worker:ci .
