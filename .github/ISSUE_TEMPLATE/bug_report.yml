@@ -1,0 +1,47 @@
+name: Bug report
+description: Something in the stack behaves differently from what's documented.
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for taking the time — see `CONTRIBUTING.md`'s "Reporting issues" section for
+        what makes a report actionable here. **Found a security vulnerability instead?**
+        Please use [private reporting](../../security/advisories/new) or see `SECURITY.md`
+        rather than filing a public issue.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What you ran, what you expected, what happened instead.
+      placeholder: |
+        Ran: curl -X POST http://localhost:8000/v1/admin/connectors/wikidata/run ...
+        Expected: a queued job id
+        Got: 500 with "..." in the response body
+    validations:
+      required: true
+  - type: textarea
+    id: logs
+    attributes:
+      label: Relevant logs
+      description: >-
+        `docker compose -f docker/docker-compose.yml logs api` (or `worker`), trimmed to the
+        relevant window. This is usually the difference between a fixable report and a guess.
+      render: shell
+  - type: input
+    id: component
+    attributes:
+      label: Where in the stack
+      description: e.g. a connector name, "query pipeline", "entity resolution", "billing", "web/app.html"
+    validations:
+      required: true
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      value: |
+        - Deployment: docker compose (default) / other
+        - `LEXICAL_BACKEND` / `JOB_QUEUE_BACKEND` / `AUTH_MODE` if non-default:
+        - OS / Docker or Podman version:
+    validations:
+      required: true
