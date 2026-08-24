@@ -1,10 +1,34 @@
-# wardline
+# Wardline
+
+[![CI](https://github.com/nixbys/wardline/actions/workflows/ci.yml/badge.svg)](https://github.com/nixbys/wardline/actions/workflows/ci.yml)
+[![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
+[![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
 A lawful OSINT + AI research platform: hybrid retrieval-augmented generation (lexical + vector + knowledge graph) over public, licensed, or consented sources, with governance, an immutable audit log, and an agentic research mode.
 
 This is the buildable translation of a fictional "omniscient" information engine (the report this repo was built from used *Hliðskjálf* from *The Irregular at Magic High School* as its reference point) into real, lawful architecture. It answers natural-language questions with **cited, verifiable answers**, never asserting a claim it can't point to a source for.
 
 *Renamed from "cranus" during a wider rebrand. One intentional fossil: the already-applied `migrations/versions/0001_initial_schema.py` still creates a Postgres function named `cranus_to_tsvector` — migration files describe exactly what was run against a real database, so that one isn't edited retroactively. It's an internal implementation detail (nothing public references the name), and any new migration is free to rename it later if that ever matters.*
+
+## Table of contents
+
+- [What this is not](#what-this-is-not)
+- [Architecture](#architecture)
+- [Setup](#setup)
+- [How to use it](#how-to-use-it)
+- [Adding a new source](#adding-a-new-source)
+- [Authorized pentesting connectors](#authorized-pentesting-connectors)
+- [Self-serve accounts](#self-serve-accounts)
+- [Billing](#billing)
+- [Governance](#governance)
+- [Testing](#testing)
+- [Production readiness](#production-readiness)
+- [Scope reductions vs. the source report](#scope-reductions-vs-the-source-report)
+- [The legal boundary](#the-legal-boundary)
+- [Contributing](#contributing)
+- [Security](#security)
+- [License](#license)
 
 ## What this is not
 
@@ -317,4 +341,29 @@ Building the *literal* fictional device this project translates from would mean 
 
 ## Contributing
 
-See `CONTRIBUTING.md` for dev setup, test/lint commands, and PR conventions. `CHANGELOG.md` tracks notable changes.
+Contributions are welcome — connectors, governance primitives, bug fixes, docs. See
+[`CONTRIBUTING.md`](CONTRIBUTING.md) for dev setup, test/lint commands, and PR conventions, and
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md) for the community standards this project holds
+contributors to. Issue templates (bug report / feature request) and a PR template live under
+[`.github/`](.github/) — use them; they front-load the context that makes a report or a review
+fast instead of a back-and-forth. `CHANGELOG.md` tracks notable changes.
+
+The short version:
+
+1. Fork, branch, and stand up the dev stack per `CONTRIBUTING.md`'s "Dev environment" section
+   (Docker-only, no host Python setup needed).
+2. Keep PRs scoped to one concern, add tests for new behavior, and make sure lint + unit tests +
+   the Docker build all pass — the same checks CI runs on every push.
+3. If you're adding a connector, read [Adding a new source](#adding-a-new-source) first — dual-use,
+   target-lookup connectors need engagement scoping, not just a role check.
+
+## Security
+
+Found a vulnerability? See [`SECURITY.md`](SECURITY.md) for what's in scope and how to report it
+privately — please don't open a public issue for a suspected vulnerability.
+
+## License
+
+Apache License 2.0 — see [`LICENSE`](LICENSE). This includes an explicit patent grant, which
+matters given the security-tooling surface area ([Authorized pentesting
+connectors](#authorized-pentesting-connectors)) this repo ships.

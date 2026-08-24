@@ -1,0 +1,8 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Report a security vulnerability
+    url: https://github.com/nixbys/wardline/security/advisories/new
+    about: Don't file a public issue for suspected vulnerabilities — see SECURITY.md.
+  - name: Ask a usage question
+    url: https://github.com/nixbys/wardline/discussions
+    about: For "how do I..." questions rather than a confirmed bug, start a discussion instead.

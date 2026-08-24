@@ -6,6 +6,16 @@ releases, so entries are grouped by work session instead of version number.
 
 ## [Unreleased]
 
+### Added
+- Open-source contribution scaffolding: `LICENSE` (Apache-2.0, plus `license`/`classifiers` in
+  `pyproject.toml`), `CODE_OF_CONDUCT.md` (Contributor Covenant 2.1, with a scope-specific note on
+  proposals to weaken engagement scoping/authorized-use boundaries), `SECURITY.md` (private
+  vulnerability reporting via GitHub Security Advisories, in/out-of-scope list specific to this
+  project's auth/RBAC/ABAC/engagement-scoping surface), and `.github/` issue templates (bug report,
+  feature request) + a PR template tied to `CONTRIBUTING.md`'s existing conventions. README gained
+  badges (CI/license/Python version) and a table of contents, and its `Contributing` section now
+  points to all of the above instead of the old "no public issue tracker yet" note.
+
 ### Changed
 - Genericized LLM backend config: `ANTHROPIC_API_KEY`/`ANTHROPIC_MODEL` → `LLM_API_KEY`/`LLM_MODEL`,
   plus a new `LLM_PROVIDER` setting (`query/llm_client.py`'s `get_llm_client()` now dispatches on
