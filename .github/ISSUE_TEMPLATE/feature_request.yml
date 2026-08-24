@@ -1,0 +1,44 @@
+name: Feature request
+description: Propose a new connector, capability, or change in scope.
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Proposing a **new connector**? Skim README's
+        [Adding a new source](../../README.md#adding-a-new-source) and
+        [Authorized pentesting connectors](../../README.md#authorized-pentesting-connectors)
+        sections first — a lot of "is this in scope" questions are already answered there,
+        including why some categories (mass interception, unauthorized-target scanning) are
+        permanently out of scope rather than a gap to fill in.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What's the gap
+      description: What can't you do today, and why does it matter?
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: Proposed change
+      description: >-
+        As concrete as you can make it — a new `Connector` subclass, a new governance
+        primitive, a change to an existing plane. Link to the relevant file(s) under `src/wardline/`
+        if you know where this would live.
+    validations:
+      required: true
+  - type: dropdown
+    id: scope-check
+    attributes:
+      label: Does this touch dual-use / target-lookup territory?
+      description: >-
+        i.e. does it look up or act on a specific third-party target rather than a fixed
+        public corpus? If yes, it needs `requires_engagement = True` and engagement-scope
+        enforcement, not just a role check — see README's "Authorized pentesting connectors".
+      options:
+        - "No — public-corpus source, like Wikipedia/archive.org"
+        - "Yes — target-lookup / dual-use, and I've read the engagement-scoping section"
+        - "Not sure"
+    validations:
+      required: true

@@ -1,4 +1,8 @@
-# Contributing to wardline
+# Contributing to Wardline
+
+Thanks for considering a contribution. This project takes contributions under the terms in
+[`LICENSE`](LICENSE) (Apache-2.0), and everyone participating is expected to follow
+[`CODE_OF_CONDUCT.md`](CODE_OF_CONDUCT.md).
 
 ## Dev environment
 
@@ -63,7 +67,11 @@ see README's "The legal boundary" section for why.
 
 ## Reporting issues
 
-There's no public issue tracker for this project yet. If you find a bug, include: what you ran,
-what you expected, what happened instead, and (if applicable) the relevant `docker compose logs`
-output — the same level of detail this repo's own commit messages use when documenting bugs found
-during live testing.
+Use the [bug report template](.github/ISSUE_TEMPLATE/bug_report.yml) when filing a GitHub issue —
+it asks for what you ran, what you expected, what happened instead, and (if applicable) the
+relevant `docker compose logs` output, the same level of detail this repo's own commit messages
+use when documenting bugs found during live testing. For a new connector or capability, use the
+[feature request template](.github/ISSUE_TEMPLATE/feature_request.yml) instead.
+
+**Found a security vulnerability?** Don't file a public issue — see [`SECURITY.md`](SECURITY.md)
+for private reporting.
