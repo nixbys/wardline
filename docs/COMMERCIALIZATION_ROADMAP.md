@@ -17,6 +17,25 @@ Everywhere the rest of this document says "PQC" or "post-quantum," that's the ac
 
 ---
 
+## Status update — 2026-09-02: this plan is already partway executed
+
+Re-affirming the goal here as "turn this into a fullstack webapp ready for commercialization" and reconciling against the actual tree turned up real drift: this document's own **Phase 0** and half of **Phase 1** landed the same day it was written (`git log` shows the roadmap commit and the accounts/billing/web-frontend commits are all dated 2026-08-22), and the code says so directly — `User`'s new columns are commented `# --- Self-serve accounts (commercialization roadmap Pillar 1) ---`. The narrative below (Pillars, phases) hasn't been rewritten to reflect that, so treat the checklist below as authoritative over the prose that follows it.
+
+**Already built, not just planned:**
+- **Pillar 1 (Accounts)** — `User.password_hash`/`email_verified_at`/`mfa_secret`/`mfa_enabled` exist; `POST /v1/auth/{signup,verify-email,login,logout}`, `/password/{forgot,reset}`, `/mfa/{enroll,confirm,disable}`, `/accept-invite` are all live (`src/wardline/api/routers/auth.py`); `POST /v1/admin/users/invite` mints an invite (`admin_users.py:53-67`). Argon2id via the existing hasher, as the roadmap specified.
+- **Pillar 5 (Billing), the plumbing half** — `GET /v1/billing/plans`, `/subscription`, `POST /checkout`, `/portal`, `/webhook` are live (`billing.py`); `BILLING_MODE=mock|stripe` per `.env`.
+- **Web frontend** — `web/` is a real fullstack front end now, not a gap: `login.html`, `verify-email.html`, `reset-password.html`, `accept-invite.html`, `pricing.html` (reads live plan data, never a hard-coded copy) sit in front of `app.html`, exactly as Phase 0 called for.
+
+**Still open, confirmed by direct check (not carried over from the doc's prose without verifying):**
+- **No tenant concept** (`grep -rn tenant src/` — zero hits) — Path A vs. Path B (below) is still an open decision, nothing forecloses it yet.
+- **No org/workspace entity** — invites assign a role directly on `User`; there's no grouping table yet for "one org, several seats" as its own billable unit (Pillar 1's org/workspace bullet, Pillar 5's Team/Enterprise tiers).
+- **No dependency/secret scanning in CI** (`.github/workflows/ci.yml` has no Dependabot/Trivy/Snyk/bandit step) — the Pillar 4 item flagged as a pre-GA blocker is still exactly that.
+- **Stripe is unverified against a live account**, MFA/recovery-code UX and the encrypted-conversation-vault (Pillar 2) are unbuilt, and per-plan rate limiting is still flat `slowapi` limits, not plan-scoped (matches the open thread already tracked from the design primer — this is the one thing standing between a free-tier key and a real bill once `LLM_CLIENT_MODE=live`, so keep it prioritized).
+
+**Net effect on the phased roadmap below**: Phase 0 is functionally done. Phase 1 is roughly half done (billing plumbing exists; per-customer dedicated-instance provisioning, org/seats as a real entity, and hosted-vs-self-host packaging on the marketing site do not). Phases 2-4 are unchanged and still fully open. The Ops Console effort tracked separately (`web/ops.html` + graph/jobs/audit/terminal admin tooling — see the active plan file) is Phase 3/4-adjacent: it's internal support/ops tooling, not customer-facing, but it becomes more valuable exactly when there are paying customers' connector jobs and audit trails to actually watch — sequence it opportunistically, not as a blocker to Phase 1.
+
+---
+
 ## Where Wardline already stands (don't rebuild this)
 
 This was scoped and built as a **single-organization internal research tool**, not a multi-tenant SaaS — that's the one sentence that explains most of what's missing below. But within that scope, more production groundwork already exists than the "add accounts and encryption" framing suggests:
@@ -128,10 +147,10 @@ Don't compete as "another AI chat with citations" — that's Perplexity's catego
 Rough sequencing, not committed dates — ranges assume a small team (2-4 engineers).
 
 **Phase 0 — Foundations (2-4 weeks)**
-Add `password_hash`/MFA columns to `User`; signup/login/recovery routes; web signup+login pages in front of `app.html`; dependency/secret scanning in CI; legal entity + ToS/Privacy Policy drafted with counsel.
+~~Add `password_hash`/MFA columns to `User`; signup/login/recovery routes; web signup+login pages in front of `app.html`~~ **done** (see status update above). Still open from this phase: dependency/secret scanning in CI; legal entity + ToS/Privacy Policy drafted with counsel.
 
 **Phase 1 — Path A commercial MVP (4-8 weeks)**
-Stripe billing + plan gating; per-customer dedicated-instance provisioning (scripted `docker compose` stand-up, not manual); org/seats on top of existing roles; hosted vs. self-host packaging live on the marketing site.
+~~Stripe billing + plan gating~~ **billing plumbing done** (`POST /checkout`/`/portal`/`/webhook` live; plan-gating enforcement and a live, non-mock Stripe account still need verifying end-to-end). Still open: per-customer dedicated-instance provisioning (scripted `docker compose` stand-up, not manual); org/seats as a real entity on top of existing roles (today's invite flow assigns a role directly on `User`, with no org/workspace grouping yet); hosted vs. self-host packaging live on the marketing site.
 
 **Phase 2 — Privacy & crypto (4-6 weeks, can run parallel to Phase 1)**
 Pillar 2's per-user encrypted conversation vault; recovery-code escrow; hybrid PQC key wrapping (Pillar 3.2); CDN/WAF in front for PQC-in-transit "for free" (Pillar 3.1); ML-DSA signing of the audit export (Pillar 3.3).
