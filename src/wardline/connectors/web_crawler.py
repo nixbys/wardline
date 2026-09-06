@@ -22,11 +22,14 @@ import httpx
 import tenacity
 
 from wardline.common.logging import get_logger
+from wardline.common.ssrf_guard import UnsafeUrlError, assert_safe_url
 from wardline.connectors.base import Connector, ParsedDocument, RawObject, SourceItem
 from wardline.connectors.registry import register_connector
 
 logger = get_logger(__name__)
 LICENSE = "open-web-crawled"
+
+_MAX_REDIRECTS = 5
 
 _retry = tenacity.retry(
     stop=tenacity.stop_after_attempt(3),
@@ -54,6 +57,9 @@ class WebCrawlerConnector(Connector):
         return urlparse(url).netloc
 
     async def _robots_allows(self, client: httpx.AsyncClient, url: str) -> bool:
+        # Callers (discover()/fetch() below) already ran assert_safe_url on
+        # `url` before reaching here, so robots.txt on that same host is
+        # covered by the same check -- this method doesn't re-validate.
         domain = self._domain(url)
         if domain not in self._robots_cache:
             robots_url = f"{urlparse(url).scheme}://{domain}/robots.txt"
@@ -82,9 +88,22 @@ class WebCrawlerConnector(Connector):
 
     @_retry
     async def _get(self, client: httpx.AsyncClient, url: str) -> httpx.Response:
-        resp = await client.get(url, timeout=20, follow_redirects=True)
-        resp.raise_for_status()
-        return resp
+        # Redirects are followed manually (not follow_redirects=True) and
+        # re-validated on every hop: an initially-safe URL can redirect
+        # somewhere unsafe, and validating only the caller-supplied URL
+        # wouldn't catch that.
+        for _ in range(_MAX_REDIRECTS + 1):
+            await assert_safe_url(url)
+            resp = await client.get(url, timeout=20, follow_redirects=False)
+            if resp.is_redirect:
+                location = resp.headers.get("location")
+                if not location:
+                    break
+                url = urljoin(url, location)
+                continue
+            resp.raise_for_status()
+            return resp
+        raise httpx.TransportError(f"too many redirects fetching {url}")
 
     async def discover(
         self,
@@ -107,6 +126,12 @@ class WebCrawlerConnector(Connector):
                     continue
                 seen.add(url)
 
+                try:
+                    await assert_safe_url(url)
+                except UnsafeUrlError as exc:
+                    logger.info("crawler.unsafe_url_skipped", url=url, error=str(exc))
+                    continue
+
                 if not await self._robots_allows(client, url):
                     logger.info("crawler.robots_disallowed", url=url)
                     continue
@@ -114,7 +139,7 @@ class WebCrawlerConnector(Connector):
                 await self._politeness_wait(url)
                 try:
                     resp = await self._get(client, url)
-                except httpx.HTTPError as exc:
+                except (httpx.HTTPError, UnsafeUrlError) as exc:
                     logger.info("crawler.fetch_failed", url=url, error=str(exc))
                     continue
 
@@ -145,6 +170,7 @@ class WebCrawlerConnector(Connector):
     async def fetch(self, item: SourceItem) -> RawObject:
         content = self._page_cache.get(item.ref)
         if content is None:
+            await assert_safe_url(item.ref)
             async with httpx.AsyncClient(headers={"User-Agent": self._user_agent}) as client:
                 if not await self._robots_allows(client, item.ref):
                     raise PermissionError(f"robots.txt disallows fetching {item.ref}")
