@@ -15,7 +15,7 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-  "fastapi>=0.115",
+  "fastapi>=0.141.1",
   "uvicorn[standard]>=0.32",
   "pydantic>=2.9",
   "pydantic-settings>=2.6",
