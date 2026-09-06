@@ -61,7 +61,7 @@ dependencies = [
   "pyarrow>=17.0",
   "python-multipart>=0.0.17",
   "argon2-cffi>=23.1",
-  "pyotp>=2.9",
+  "pyotp>=2.10.0",
   "stripe>=11.1",
   "datasketch>=1.6",
 ]
