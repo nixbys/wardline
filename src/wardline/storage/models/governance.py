@@ -42,6 +42,15 @@ class User(Base, TimestampMixin):
     mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
+    # --- Org/workspace membership (commercialization roadmap Pillar 1) ---
+    # Nullable: a solo signup or an admin-minted CLI/OIDC user belongs to no
+    # org until one is created (storage/models/orgs.py) and they join it.
+    org_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True
+    )
+
+    __table_args__ = (Index("ix_users_org_id", "org_id"),)
+
 
 class ApiKey(Base, TimestampMixin):
     __tablename__ = "api_keys"

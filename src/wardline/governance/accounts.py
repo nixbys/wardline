@@ -291,11 +291,18 @@ def disable_mfa(db: Session, user: User, *, code: str | None, recovery_code: str
 # --- Admin invites ------------------------------------------------------
 
 
-def create_invite(db: Session, *, email: str, role: str) -> str:
+def create_invite(db: Session, *, email: str, role: str, org_id: str | None = None) -> str:
+    """`org_id` is optional and defaults to None, preserving the original
+    global-invite behavior (`api/routers/admin_users.py`) -- an org invite
+    (`governance/orgs.invite_to_org`) passes it through so the invited user
+    joins that org once they accept."""
     user = db.query(User).filter(User.email == email).first()
     if user is None:
-        user = User(email=email, role=role)
+        user = User(email=email, role=role, org_id=org_id)
         db.add(user)
+        db.flush()
+    elif org_id is not None and user.org_id is None:
+        user.org_id = org_id
         db.flush()
     link = _issue_token_and_link(db, user, purpose="invite", path="/accept-invite")
     send_email(email, "You've been invited to Wardline", f"Set up your account: {link}")
