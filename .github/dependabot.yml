@@ -1,0 +1,20 @@
+version: 2
+updates:
+  # pyproject.toml — the sole Python dependency manifest.
+  - package-ecosystem: "pip"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+
+  # docker/Dockerfile.api and docker/Dockerfile.worker both live here;
+  # Dependabot scans every Dockerfile it finds in the given directory.
+  - package-ecosystem: "docker"
+    directory: "/docker"
+    schedule:
+      interval: "weekly"
+
+  # Version pins in .github/workflows/*.yml (actions/checkout, etc.)
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"

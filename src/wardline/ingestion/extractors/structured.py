@@ -8,8 +8,12 @@ from __future__ import annotations
 import csv
 import io
 import json
-import xml.etree.ElementTree as ET
 from dataclasses import dataclass
+
+# Not stdlib xml.etree: this parses content from ingestion connectors, which
+# is untrusted input. defusedxml guards against XXE/billion-laughs/entity
+# expansion attacks that xml.etree.ElementTree.fromstring doesn't.
+import defusedxml.ElementTree as ET
 
 
 @dataclass
