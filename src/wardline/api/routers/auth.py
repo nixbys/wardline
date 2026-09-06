@@ -74,6 +74,7 @@ def whoami(user: User = Depends(get_current_user)) -> dict:
         "role": user.role,
         "email_verified": user.email_verified_at is not None,
         "mfa_enabled": user.mfa_enabled,
+        "org_id": user.org_id,
     }
 
 

@@ -24,6 +24,7 @@ from wardline.storage.models.governance import (
     User,
 )
 from wardline.storage.models.ingestion import IngestionJob, Source
+from wardline.storage.models.orgs import Organization
 
 __all__ = [
     "ApiKey",
@@ -40,6 +41,7 @@ __all__ = [
     "EntityResolutionReview",
     "Feedback",
     "IngestionJob",
+    "Organization",
     "RecoveryCode",
     "Source",
     "Subscription",
