@@ -38,7 +38,7 @@ docker==7.2.0
 docstring_parser==0.18.0
 ecdsa==0.19.2
 en_core_web_sm @ https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl#sha256=1932429db727d4bff3deed6b34cfc05df17794f4a52eeb26cf8928f7c1a0fb85
-fastapi==0.139.0
+fastapi==0.141.1
 filelock==3.29.7
 filetype==1.2.0
 fsspec==2026.6.0
