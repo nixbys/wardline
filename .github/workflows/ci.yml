@@ -113,9 +113,39 @@ jobs:
           KAFKA_BOOTSTRAP_SERVERS: localhost:9092
         run: pytest tests/unit tests/integration -v
 
+  security:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-python@v7
+        with:
+          python-version: "3.12"
+      - name: Bandit (SAST)
+        # Static analysis of src/ only -- no need to install the package.
+        run: pip install bandit==1.9.4 && bandit -r src
+      - name: pip-audit (dependency vulnerabilities)
+        # ecdsa's only known vuln (PYSEC-2026-1325) is a timing attack on
+        # ecdsa.SigningKey.sign_digest() -- the advisory itself says
+        # verification is unaffected, and this codebase only ever verifies
+        # externally-issued JWTs via jose.jwt.decode (src/wardline/api/oidc_auth.py),
+        # never signs or generates ECDSA keys. Upstream has no planned fix
+        # (side-channel attacks are explicitly out of scope for the project).
+        run: |
+          pip install pip-audit==2.10.1
+          pip-audit -r requirements-lock.txt --ignore-vuln PYSEC-2026-1325
+      - name: Gitleaks (secret scanning)
+        # The CLI directly, not gitleaks/gitleaks-action, to avoid that
+        # wrapper's org-licensing terms -- the underlying tool is MIT
+        # licensed. --no-git scans the tree as checked out, not full
+        # history, so this doesn't need to react to old commits on its
+        # first run.
+        run: |
+          docker run --rm -v "$PWD:/repo" zricethezav/gitleaks:v8.30.1 \
+            detect --source /repo --no-git --redact -v
+
   docker-build:
     runs-on: ubuntu-latest
-    needs: [lint, test]
+    needs: [lint, test, security]
     steps:
       - uses: actions/checkout@v7
       - name: Build api image
