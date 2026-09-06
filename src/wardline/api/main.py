@@ -20,6 +20,7 @@ from wardline.api.routers import (
     entity_review,
     feedback,
     health,
+    orgs,
     query,
     session,
     upload,
@@ -94,6 +95,7 @@ def create_app() -> FastAPI:
 
     app.include_router(health.router)
     app.include_router(auth.router)
+    app.include_router(orgs.router)
     app.include_router(billing.router)
     app.include_router(query.router)
     app.include_router(session.router)

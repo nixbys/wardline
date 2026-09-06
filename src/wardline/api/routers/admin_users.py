@@ -70,7 +70,10 @@ def invite_user(
 @router.get("/users")
 def list_users(db: Session = Depends(get_db), _admin: User = Depends(_admin_only)) -> list[dict]:
     users = list(db.execute(select(User)).scalars())
-    return [{"id": u.id, "email": u.email, "role": u.role, "revoked": u.revoked} for u in users]
+    return [
+        {"id": u.id, "email": u.email, "role": u.role, "revoked": u.revoked, "org_id": u.org_id}
+        for u in users
+    ]
 
 
 @router.post("/users/{user_id}/revoke")
