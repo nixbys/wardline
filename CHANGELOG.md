@@ -56,7 +56,7 @@ releases, so entries are grouped by work session instead of version number.
   `toolrunner` sidecar container — `docker/toolrunner/`, optional `--profile toolrunner`) — the
   first connectors to actually use `requires_engagement`/`enforce_engagement_scope`, previously
   scaffolding with nothing behind it. Both tagged `internal-only` (ABAC), inspired by (not
-  vendored from — kept at arm's length specifically to avoid AGPL scope creep) Odysseus Red's
+  vendored from — kept at arm's length specifically to avoid AGPL scope creep) chiron's
   tool categories. `governance.engagements.target_in_scope` now understands CIDR ranges, not just
   domain suffixes, since infra engagements are routinely scoped to a network block.
 - `docs/COMMERCIALIZATION_ROADMAP.md`: production/accounts/encryption/go-to-market plan, written
