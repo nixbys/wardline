@@ -6,6 +6,13 @@ handler, not a second source of truth Stripe has to agree with.
 
 Every user implicitly has the free plan until a `Subscription` row exists
 and is `active` — there's no separate "free" row to create or maintain.
+
+`org_id` (nullable, unique when set): a per-seat plan (Team) is bought
+once by an org's owner and covers every member of that org, not just the
+buyer -- `governance/billing.get_subscription` checks for an org-scoped
+row before falling back to the caller's own personal one. `user_id` still
+means "who's on file with Stripe as the payer" even for an org-scoped row;
+it doesn't become every member's row.
 """
 
 from __future__ import annotations
@@ -37,3 +44,6 @@ class Subscription(Base, TimestampMixin):
     stripe_customer_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     stripe_subscription_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
     current_period_end: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
+    org_id: Mapped[str | None] = mapped_column(
+        String(64), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, unique=True
+    )

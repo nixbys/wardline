@@ -13,16 +13,19 @@ from sqlalchemy.orm import Session
 
 from wardline.common.errors import AccessDeniedError
 from wardline.common.plans import ENTERPRISE, FREE, PRO, TEAM, get_plan, public_plan_list
-from wardline.governance import billing, entitlements
+from wardline.governance import billing, entitlements, orgs
 from wardline.storage.models.base import Base
 from wardline.storage.models.billing import STATUS_ACTIVE, STATUS_CANCELED, Subscription
 from wardline.storage.models.governance import User
+from wardline.storage.models.orgs import Organization
 
 
 @pytest.fixture()
 def db():
     engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine, tables=[User.__table__, Subscription.__table__])
+    Base.metadata.create_all(
+        engine, tables=[User.__table__, Subscription.__table__, Organization.__table__]
+    )
     with Session(engine) as session:
         yield session
 
@@ -162,3 +165,84 @@ def test_webhook_for_unknown_customer_is_a_no_op(db, user):
     billing.handle_webhook_event(
         db, _event("customer.subscription.updated", {"customer": "cus_unknown", "status": "active"})
     )
+
+
+# --- org-scoped billing (Pillar 5's Team/Enterprise "one org, several
+# seats" model, hung off the org/workspace entity) --------------------
+
+
+def test_checkout_for_a_per_seat_plan_requires_an_org(db, user):
+    with pytest.raises(AccessDeniedError, match="create one first"):
+        billing.create_checkout_session(db, user, plan_id=TEAM)
+
+
+def test_checkout_for_a_per_seat_plan_requires_the_org_owner(db, user):
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    member = User(email="member@example.com", role="viewer", org_id=org.id)
+    db.add(member)
+    db.flush()
+    with pytest.raises(AccessDeniedError, match="only your organization's owner"):
+        billing.create_checkout_session(db, member, plan_id=TEAM)
+
+
+def test_owner_checkout_for_team_plan_activates_an_org_scoped_subscription(db, user):
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    billing.create_checkout_session(db, user, plan_id=TEAM)
+    sub = billing.get_subscription(db, user)
+    assert sub.org_id == org.id
+    assert sub.plan == TEAM
+
+
+def test_org_members_share_the_owners_subscription(db, user):
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    billing.create_checkout_session(db, user, plan_id=TEAM)
+
+    member = User(email="member@example.com", role="viewer", org_id=org.id)
+    db.add(member)
+    db.flush()
+
+    assert billing.current_plan_id(db, member) == TEAM
+    # Same row, not a second one -- "one org, several seats" is one
+    # Subscription, not one per member.
+    assert billing.get_subscription(db, member).id == billing.get_subscription(db, user).id
+
+
+def test_a_member_without_an_org_subscription_keeps_their_own_personal_plan(db, user):
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    # Owner never checks out a Team plan for the org -- member's own
+    # personal subscription (if any) must still apply, not "free" by
+    # virtue of the org existing.
+    member = User(email="member@example.com", role="viewer", org_id=org.id)
+    db.add(member)
+    db.flush()
+    billing.create_checkout_session(db, member, plan_id=PRO)
+    assert billing.current_plan_id(db, member) == PRO
+
+
+def test_only_the_org_owner_can_manage_the_shared_subscription_portal(db, user):
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    billing.create_checkout_session(db, user, plan_id=TEAM)
+    member = User(email="member@example.com", role="viewer", org_id=org.id)
+    db.add(member)
+    db.flush()
+
+    billing.create_portal_session(db, user)  # owner: does not raise
+    with pytest.raises(AccessDeniedError, match="only your organization's owner"):
+        billing.create_portal_session(db, member)
+
+
+def test_webhook_checkout_completed_with_org_id_activates_the_org_subscription(db, user):
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    event = _event(
+        "checkout.session.completed",
+        {
+            "metadata": {"user_id": user.id, "plan": TEAM, "org_id": org.id},
+            "customer": "cus_org_1",
+            "subscription": "sub_org_1",
+        },
+    )
+    billing.handle_webhook_event(db, event)
+    sub = db.query(Subscription).filter(Subscription.org_id == org.id).first()
+    assert sub is not None
+    assert sub.plan == TEAM
+    assert sub.status == STATUS_ACTIVE
