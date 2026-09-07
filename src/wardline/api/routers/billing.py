@@ -33,11 +33,16 @@ def list_plans() -> list[dict]:
 def get_subscription(db: Session = Depends(get_db), user: User = Depends(get_current_user)) -> dict:
     sub = billing.get_subscription(db, user)
     if sub is None:
-        return {"plan": "free", "status": "active", "current_period_end": None}
+        return {"plan": "free", "status": "active", "current_period_end": None, "org_id": None}
     return {
         "plan": sub.plan,
         "status": sub.status,
         "current_period_end": sub.current_period_end.isoformat() if sub.current_period_end else None,
+        # Non-null means this plan is shared across the caller's whole
+        # org (bought once by its owner), not billed to them individually
+        # -- the frontend uses this to show "org-wide" instead of a
+        # personal "Manage billing" button for non-owner members.
+        "org_id": sub.org_id,
     }
 
 
