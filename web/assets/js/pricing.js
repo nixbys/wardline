@@ -28,7 +28,7 @@
       `${plan.modes.includes("research") ? "Fast, Auto & Research" : "Fast & Auto"} query modes`,
       `Up to ${plan.max_sources_cap} sources per answer`,
     ];
-    if (plan.id === "team") lines.push("Shared org-wide audit log");
+    if (plan.id === "team") lines.push("Shared org-wide audit log", "Hosted or self-hosted");
     if (plan.id === "enterprise") lines.push("Dedicated instance or self-host, SSO, SLA");
     return lines;
   }
