@@ -212,6 +212,31 @@
           <hr class="divider" />
 
           <div class="field">
+            <label class="field__label">Organization</label>
+            <p class="field__hint" id="orgStatusLabel">—</p>
+
+            <div id="orgNoneState" hidden style="display:flex; gap:0.4rem;">
+              <input class="input" id="orgNameInput" type="text" placeholder="Organization name" />
+              <button class="btn btn--secondary btn--sm" id="orgCreateBtn" type="button">Create</button>
+            </div>
+
+            <div id="orgOwnerState" hidden style="display:flex; flex-direction:column; gap:0.6rem; margin-top:0.4rem;">
+              <div id="orgMemberList" class="recovery-codes"></div>
+              <div style="display:flex; gap:0.4rem;">
+                <input class="input" id="orgInviteEmail" type="email" placeholder="teammate@example.com" />
+                <select class="input" id="orgInviteRole" style="max-width:8rem;">
+                  <option value="viewer">Viewer</option>
+                  <option value="analyst">Analyst</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <button class="btn btn--secondary btn--sm" id="orgInviteBtn" type="button">Invite</button>
+              </div>
+            </div>
+          </div>
+
+          <hr class="divider" />
+
+          <div class="field">
             <label class="field__label">Billing</label>
             <p class="field__hint" id="billingPlanLabel">—</p>
             <div style="display:flex; gap:0.4rem;">
