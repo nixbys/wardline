@@ -32,6 +32,7 @@ class Plan:
     modes: frozenset[str]  # query modes this plan may use (see common/schemas.QueryRequest.mode)
     max_sources_cap: int  # hard ceiling on QueryRequest.max_sources, regardless of what's asked
     self_serve_checkout: bool  # False => Enterprise-style "talk to us", no Stripe Checkout button
+    query_rate_limit_per_minute: int  # POST /v1/query ceiling for this plan (api/routers/query.py)
 
 
 PLANS: dict[str, Plan] = {
@@ -43,6 +44,7 @@ PLANS: dict[str, Plan] = {
         modes=frozenset({"fast", "auto"}),
         max_sources_cap=6,
         self_serve_checkout=False,  # nothing to check out -- it's the unpaid default
+        query_rate_limit_per_minute=10,
     ),
     PRO: Plan(
         id=PRO,
@@ -52,6 +54,7 @@ PLANS: dict[str, Plan] = {
         modes=frozenset({"fast", "auto", "research"}),
         max_sources_cap=12,
         self_serve_checkout=True,
+        query_rate_limit_per_minute=30,
     ),
     TEAM: Plan(
         id=TEAM,
@@ -61,6 +64,7 @@ PLANS: dict[str, Plan] = {
         modes=frozenset({"fast", "auto", "research"}),
         max_sources_cap=20,
         self_serve_checkout=True,
+        query_rate_limit_per_minute=60,
     ),
     ENTERPRISE: Plan(
         id=ENTERPRISE,
@@ -70,6 +74,7 @@ PLANS: dict[str, Plan] = {
         modes=frozenset({"fast", "auto", "research"}),
         max_sources_cap=50,
         self_serve_checkout=False,  # dedicated instance / contract, not a Stripe Checkout flow
+        query_rate_limit_per_minute=120,
     ),
 }
 
