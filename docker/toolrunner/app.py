@@ -18,7 +18,7 @@ the `worker` container that actually runs ingestion jobs.
 Scan behavior is deliberately conservative for a first cut: TCP connect
 scan only (nmap's default without `-sS`), which doesn't need `NET_RAW`/
 `NET_ADMIN` — so this container runs with no added capabilities and as a
-non-root user (see Dockerfile). Extending this to more of Odysseus Red's
+non-root user (see Dockerfile). Extending this to more of chiron's
 tool categories (sqlmap, nuclei, masscan, gobuster, nikto, theHarvester, ...)
 means adding one more `/scan/<tool>` route each, following this exact
 pattern: a strict input allowlist, a fixed non-shell argv, a timeout, and a
