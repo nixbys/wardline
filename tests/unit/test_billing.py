@@ -231,6 +231,22 @@ def test_only_the_org_owner_can_manage_the_shared_subscription_portal(db, user):
         billing.create_portal_session(db, member)
 
 
+def test_owner_with_an_existing_personal_subscription_can_still_buy_team(db, user):
+    # Owner was already on Pro individually before creating an org and
+    # buying Team for it -- subscriptions.user_id is unique, so this must
+    # reuse/repurpose that row (org_id set on it) rather than trying to
+    # insert a second row for the same user_id, which would raise
+    # IntegrityError.
+    billing.create_checkout_session(db, user, plan_id=PRO)
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    billing.create_checkout_session(db, user, plan_id=TEAM)
+
+    sub = billing.get_subscription(db, user)
+    assert sub.org_id == org.id
+    assert sub.plan == TEAM
+    assert db.query(Subscription).filter(Subscription.user_id == user.id).count() == 1
+
+
 def test_webhook_checkout_completed_with_org_id_activates_the_org_subscription(db, user):
     org = orgs.create_organization(db, owner=user, name="Acme Inc")
     event = _event(
@@ -246,3 +262,25 @@ def test_webhook_checkout_completed_with_org_id_activates_the_org_subscription(d
     assert sub is not None
     assert sub.plan == TEAM
     assert sub.status == STATUS_ACTIVE
+
+
+def test_webhook_checkout_completed_with_org_id_reuses_owners_existing_row(db, user):
+    # Same unique-user_id hazard as the checkout-session path, but via the
+    # webhook: the payer already has a personal Subscription row when the
+    # org's first checkout.session.completed event arrives.
+    db.add(Subscription(user_id=user.id, plan=PRO, status=STATUS_ACTIVE, stripe_customer_id="cus_personal"))
+    db.flush()
+    org = orgs.create_organization(db, owner=user, name="Acme Inc")
+    event = _event(
+        "checkout.session.completed",
+        {
+            "metadata": {"user_id": user.id, "plan": TEAM, "org_id": org.id},
+            "customer": "cus_org_1",
+            "subscription": "sub_org_1",
+        },
+    )
+    billing.handle_webhook_event(db, event)  # must not raise IntegrityError
+    sub = db.query(Subscription).filter(Subscription.org_id == org.id).first()
+    assert sub is not None
+    assert sub.plan == TEAM
+    assert db.query(Subscription).filter(Subscription.user_id == user.id).count() == 1
