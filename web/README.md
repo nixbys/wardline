@@ -59,7 +59,8 @@ client-only:
 | Sign up / log in / MFA | `POST /v1/auth/signup`, `/login`, `/mfa/*` (`login.html`) |
 | Password reset / email verification / invite acceptance | `POST /v1/auth/password/*`, `/verify-email`, `/accept-invite` (`reset-password.html`, `verify-email.html`, `accept-invite.html`) |
 | Pricing page / plan limits shown | `GET /v1/billing/plans` (`pricing.html`) — same numbers the server enforces, never a separate hard-coded copy |
-| Subscribe / manage billing | `POST /v1/billing/checkout`, `/portal` (`pricing.html`, `app.html`'s settings modal) |
+| Subscribe / manage billing | `POST /v1/billing/checkout`, `/portal` (`pricing.html`, `app.html`'s settings modal) — a `Team` checkout by an org's owner activates one subscription shared by every member, not billed per-person |
+| Organization: create / invite / member list | `POST /v1/orgs`, `/invite`, `GET /v1/orgs/me`, `/members` (`app.html`'s settings modal — owner sees the member list and an invite form; a non-owner member just sees who owns their org) |
 | Ask a question | `POST /v1/query` |
 | Sources / citations per answer | `sources` field of the query response |
 | Thumbs up/down on an answer | `POST /v1/feedback` |
