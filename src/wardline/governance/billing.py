@@ -95,11 +95,20 @@ def _get_or_create_subscription(db: Session, user: User) -> Subscription:
 def _get_or_create_org_subscription(db: Session, org: Organization) -> Subscription:
     sub = db.query(Subscription).filter(Subscription.org_id == org.id).first()
     if sub is None:
+        # user_id is unique, so if the owner already has a personal
+        # Subscription row (e.g. they were on Pro individually before
+        # buying Team for the org), reuse that row rather than inserting
+        # a second one for the same user_id -- that would violate the
+        # unique constraint. Their personal plan is superseded by the
+        # org's from here on; get_subscription() checks org first anyway.
+        sub = db.query(Subscription).filter(Subscription.user_id == org.owner_user_id).first()
+        if sub is None:
+            sub = Subscription(user_id=org.owner_user_id)
+            db.add(sub)
         # user_id still records who's on file with Stripe as the payer
         # (the org's owner) -- org_id is what makes every member's
         # get_subscription() resolve to this same row.
-        sub = Subscription(user_id=org.owner_user_id, org_id=org.id)
-        db.add(sub)
+        sub.org_id = org.id
         db.flush()
     return sub
 
@@ -228,8 +237,13 @@ def handle_webhook_event(db: Session, event: dict) -> None:
         if org_id:
             sub = db.query(Subscription).filter(Subscription.org_id == org_id).first()
             if sub is None:
-                sub = Subscription(user_id=user_id, org_id=org_id)
-                db.add(sub)
+                # Same user_id-uniqueness hazard as _get_or_create_org_subscription:
+                # the payer (org owner) may already have a personal row.
+                sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
+                if sub is None:
+                    sub = Subscription(user_id=user_id)
+                    db.add(sub)
+                sub.org_id = org_id
         else:
             sub = db.query(Subscription).filter(Subscription.user_id == user_id).first()
             if sub is None:
