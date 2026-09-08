@@ -13,14 +13,23 @@ from sqlalchemy.orm import Session
 from wardline.common.errors import AccessDeniedError
 from wardline.governance import accounts, orgs
 from wardline.storage.models.base import Base
-from wardline.storage.models.governance import AuthToken, User
+from wardline.storage.models.governance import AuthToken, RecoveryCode, User, VaultKey
 from wardline.storage.models.orgs import Organization
 
 
 @pytest.fixture()
 def db():
     engine = create_engine("sqlite:///:memory:")
-    Base.metadata.create_all(engine, tables=[User.__table__, Organization.__table__, AuthToken.__table__])
+    Base.metadata.create_all(
+        engine,
+        tables=[
+            User.__table__,
+            Organization.__table__,
+            AuthToken.__table__,
+            RecoveryCode.__table__,
+            VaultKey.__table__,
+        ],
+    )
     with Session(engine) as session:
         yield session
 
@@ -49,10 +58,12 @@ def test_create_organization_rejects_a_user_already_in_one(db):
 def test_invite_to_org_sets_org_id_on_the_invited_user(db):
     owner = _make_user(db)
     org = orgs.create_organization(db, owner=owner, name="Acme Inc")
-    link = orgs.invite_to_org(db, org=org, inviter=owner, email="teammate@example.com", role="analyst")
+    link = orgs.invite_to_org(
+        db, org=org, inviter=owner, email="teammate@example.com", role="analyst"
+    )
 
     token = link.rsplit("token=", 1)[1]
-    invited = accounts.accept_invite(db, token=token, password="a-strong-invited-password")
+    invited, _codes = accounts.accept_invite(db, token=token, password="a-strong-invited-password")
     assert invited.org_id == org.id
     assert invited.role == "analyst"
 
@@ -62,7 +73,9 @@ def test_invite_to_org_rejects_a_non_owner(db):
     org = orgs.create_organization(db, owner=owner, name="Acme Inc")
     someone_else = _make_user(db, email="someone-else@example.com")
     with pytest.raises(AccessDeniedError, match="owner"):
-        orgs.invite_to_org(db, org=org, inviter=someone_else, email="teammate@example.com", role="viewer")
+        orgs.invite_to_org(
+            db, org=org, inviter=someone_else, email="teammate@example.com", role="viewer"
+        )
 
 
 def test_list_org_members_scopes_to_the_org(db):
@@ -70,7 +83,9 @@ def test_list_org_members_scopes_to_the_org(db):
     org = orgs.create_organization(db, owner=owner, name="Acme Inc")
     outsider = _make_user(db, email="outsider@example.com")
 
-    link = orgs.invite_to_org(db, org=org, inviter=owner, email="teammate@example.com", role="viewer")
+    link = orgs.invite_to_org(
+        db, org=org, inviter=owner, email="teammate@example.com", role="viewer"
+    )
     token = link.rsplit("token=", 1)[1]
     accounts.accept_invite(db, token=token, password="a-strong-invited-password")
 

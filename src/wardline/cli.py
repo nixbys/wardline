@@ -63,5 +63,20 @@ def list_connectors() -> None:
         typer.echo(connector_name)
 
 
+@app.command("generate-iceberg-signing-key")
+def generate_iceberg_signing_key() -> None:
+    """One-time setup for Iceberg export signing (commercialization
+    roadmap Phase 2 / Pillar 3.3): generates a fresh ML-DSA-65 keypair.
+    The seed is a real secret -- set it as ICEBERG_SIGNING_KEY_SEED (or
+    drop it at /run/secrets/iceberg_signing_key_seed) and flip
+    iceberg_export_signing_enabled on. The public key isn't secret --
+    publish/document it for customers to verify receipts against."""
+    from wardline.storage.iceberg_signing import generate_signing_keypair
+
+    seed_b64, public_b64 = generate_signing_keypair()
+    typer.echo(f"seed (secret — set as ICEBERG_SIGNING_KEY_SEED): {seed_b64}")
+    typer.echo(f"public key (safe to publish): {public_b64}")
+
+
 if __name__ == "__main__":
     app()

@@ -12,7 +12,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 from sqlalchemy.orm import Session
 
 from wardline.agent.loop import run_agent
-from wardline.api.deps import get_current_user_active, get_db
+from wardline.api.deps import get_current_user_active, get_db, get_vault_dek
 from wardline.common.config import get_settings
 from wardline.common.errors import AccessDeniedError
 from wardline.common.plans import get_plan
@@ -21,6 +21,7 @@ from wardline.common.security import lookup_key_for_index, verify_api_key
 from wardline.governance import billing, entitlements
 from wardline.governance.rate_limit import limiter
 from wardline.query.pipeline import answer
+from wardline.security.vault import should_encrypt_history
 from wardline.storage.db import sync_session
 from wardline.storage.models.governance import ApiKey, User
 
@@ -86,6 +87,7 @@ def run_query(
     body: QueryRequest,
     db: Session = Depends(get_db),
     user: User = Depends(get_current_user_active),
+    dek: bytes | None = Depends(get_vault_dek),
 ) -> QueryResponse:
     plan_id = billing.current_plan_id(db, user)
     try:
@@ -94,9 +96,22 @@ def run_query(
         raise HTTPException(status_code=403, detail=str(exc)) from exc
     max_sources = entitlements.capped_max_sources(plan_id, body.max_sources)
 
+    # Only a Pro solo user's own question gets encrypted (commercialization
+    # roadmap Phase 2) -- should_encrypt_history is the single source of
+    # truth for that gate; dek itself is already None for anyone without a
+    # live session bridge (OIDC, no vault, etc.), but a Team/Free user with
+    # a bridged session must still not have their question encrypted just
+    # because a DEK happens to be resolvable.
+    query_dek = dek if should_encrypt_history(db, user) else None
+
     if body.mode == "research":
         result = run_agent(
-            db, user=user, question=body.question, filters=body.filters, max_sources=max_sources
+            db,
+            user=user,
+            question=body.question,
+            filters=body.filters,
+            max_sources=max_sources,
+            dek=query_dek,
         )
     else:
         result = answer(
@@ -106,5 +121,6 @@ def run_query(
             mode=body.mode,
             filters=body.filters,
             max_sources=max_sources,
+            dek=query_dek,
         )
     return QueryResponse(**result)

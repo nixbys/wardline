@@ -22,7 +22,9 @@ from wardline.storage.models.governance import (
     RecoveryCode,
     SystemSetting,
     User,
+    VaultKey,
 )
+from wardline.storage.models.iceberg import IcebergExportReceipt
 from wardline.storage.models.ingestion import IngestionJob, Source
 from wardline.storage.models.orgs import Organization
 
@@ -40,6 +42,7 @@ __all__ = [
     "EntityMention",
     "EntityResolutionReview",
     "Feedback",
+    "IcebergExportReceipt",
     "IngestionJob",
     "Organization",
     "RecoveryCode",
@@ -47,4 +50,5 @@ __all__ = [
     "Subscription",
     "SystemSetting",
     "User",
+    "VaultKey",
 ]
