@@ -13,7 +13,7 @@ from __future__ import annotations
 from datetime import datetime
 from functools import partial
 
-from sqlalchemy import Boolean, DateTime, ForeignKey, Index, String
+from sqlalchemy import Boolean, DateTime, ForeignKey, Index, LargeBinary, String
 from sqlalchemy.dialects.postgresql import JSONB
 from sqlalchemy.orm import Mapped, mapped_column
 
@@ -65,6 +65,17 @@ class ApiKey(Base, TimestampMixin):
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # --- Encrypted conversation vault (commercialization roadmap Pillar 2) ---
+    # The vault DEK, re-wrapped under settings.vault_session_secret for this
+    # session's lifetime (security/vault.py) -- the "session bridge" that lets
+    # a request decrypt/encrypt without the plaintext password, which only
+    # ever existed for the instant of the login call. Both null for any
+    # session that never resolved a vault (no VaultKey, OIDC user, vault
+    # disabled) and cleared on logout/revocation so a revoked session can't
+    # still be unwrapped.
+    vault_dek_wrapped: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    vault_dek_nonce: Mapped[bytes | None] = mapped_column(LargeBinary(12), nullable=True)
+
     __table_args__ = (Index("ix_api_keys_lookup_hash", "lookup_hash"),)
 
 
@@ -101,7 +112,37 @@ class RecoveryCode(Base, TimestampMixin):
     code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
+    # --- Encrypted conversation vault escrow (commercialization roadmap Pillar 2) ---
+    # Null for a user with no vault (Free tier, org member -- see
+    # security/vault.should_encrypt_history) or a code issued before this
+    # existed. Populated whenever a live vault DEK is available at issuance
+    # time (signup, confirm_mfa, or a password reset that re-wraps every
+    # still-unused code) so ANY unredeemed code can later unwrap the vault
+    # during account recovery, not just disable MFA.
+    vault_wrapped_dek: Mapped[bytes | None] = mapped_column(LargeBinary, nullable=True)
+    vault_wrapped_dek_nonce: Mapped[bytes | None] = mapped_column(LargeBinary(12), nullable=True)
+
     __table_args__ = (Index("ix_recovery_codes_user_id", "user_id"),)
+
+
+class VaultKey(Base, TimestampMixin):
+    """One row per user with an encrypted conversation-history vault
+    (commercialization roadmap Pillar 2, security/vault.py). Holds the
+    user's data-encryption key (DEK), wrapped under a key derived from
+    their password -- never the DEK itself in the clear. `kdf_salt` is a
+    dedicated, deterministic-KDF salt (unlike password_hash's own argon2
+    salt, which is verify-only and can't be used to re-derive the same
+    key twice)."""
+
+    __tablename__ = "vault_keys"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=partial(new_id, "vlt"))
+    user_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("users.id", ondelete="CASCADE"), nullable=False, unique=True
+    )
+    kdf_salt: Mapped[bytes] = mapped_column(LargeBinary(16), nullable=False)
+    wrapped_dek: Mapped[bytes] = mapped_column(LargeBinary, nullable=False)
+    wrapped_dek_nonce: Mapped[bytes] = mapped_column(LargeBinary(12), nullable=False)
 
 
 class AuditEvent(Base):
