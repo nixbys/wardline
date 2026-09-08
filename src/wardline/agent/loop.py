@@ -33,12 +33,13 @@ def run_agent(
     question: str,
     filters: dict | None = None,
     max_sources: int = 12,
+    dek: bytes | None = None,
 ) -> dict:
     settings = get_settings()
     filters = filters or {}
     start = time.monotonic()
 
-    session_id = audit.open_session(db, user.id, question, "research")
+    session_id = audit.open_session(db, user.id, question, "research", dek=dek)
     llm = get_llm_client()
     budget = AgentBudget(max_steps=settings.agent_max_steps, max_total_tokens=settings.agent_max_total_tokens)
 

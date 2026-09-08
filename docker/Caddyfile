@@ -1,3 +1,17 @@
+# Post-quantum TLS (commercialization roadmap Phase 2 / Pillar 3.1): Caddy's
+# own Go TLS stack doesn't yet negotiate a hybrid X25519+ML-KEM-768 key
+# exchange for TLS 1.3 as of the version pinned in docker-compose.yml --
+# there's no Caddyfile directive to opt into it because the underlying
+# support isn't there yet. Track https://github.com/golang/go (the `crypto/tls`
+# X25519MLKEM768 curve ID landed in Go 1.24; confirm Caddy's own Go
+# toolchain/build has picked it up) and bump the pinned Caddy image once it
+# has -- this then applies for free, no config change beyond the version bump.
+#
+# Until then, the effort-to-value winner (see docs/COMMERCIALIZATION_ROADMAP.md's
+# Pillar 3.1) is putting a modern CDN/WAF in front of this reverse proxy
+# instead: Cloudflare and comparable providers already offer hybrid
+# X25519+ML-KEM-768 for TLS 1.3 today, no code or infra change here at all
+# -- see docs/DEPLOYMENT_PQC.md.
 {$DOMAIN:localhost} {
 	reverse_proxy api:8000
 
