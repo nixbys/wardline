@@ -25,8 +25,10 @@ from pathlib import Path
 
 from wardline.common.config import get_settings
 from wardline.common.logging import get_logger
+from wardline.storage import iceberg_signing
 from wardline.storage.db import sync_session
 from wardline.storage.models.governance import AuditEvent
+from wardline.storage.models.iceberg import IcebergExportReceipt
 
 logger = get_logger(__name__)
 
@@ -121,4 +123,33 @@ def export_audit_events() -> dict:
     )
     table.append(batch)
     logger.info("iceberg_export.appended", rows=len(rows))
+
+    snapshot = table.current_snapshot()
+    _record_receipt(rows, snapshot.snapshot_id if snapshot else "unknown")
+
     return {"exported": len(rows)}
+
+
+def _record_receipt(rows: list[AuditEvent], snapshot_id: str) -> None:
+    """Best-effort: signing is opt-in (settings.iceberg_export_signing_enabled)
+    and needs a keypair generated first, so this is a no-op — not an
+    error — until both are set up. See storage/iceberg_signing.py."""
+    receipt = iceberg_signing.build_receipt(rows, snapshot_id)
+    signed = iceberg_signing.sign_receipt(receipt)
+    if signed is None:
+        return
+    signature, public_key = signed
+    with sync_session() as db:
+        db.add(
+            IcebergExportReceipt(
+                snapshot_id=receipt["snapshot_id"],
+                row_count=receipt["row_count"],
+                time_range_start=receipt["time_range_start"],
+                time_range_end=receipt["time_range_end"],
+                batch_sha256=receipt["batch_sha256"],
+                algorithm=iceberg_signing.ALGORITHM,
+                signature=signature,
+                public_key=public_key,
+            )
+        )
+    logger.info("iceberg_export.receipt_signed", snapshot_id=receipt["snapshot_id"])
