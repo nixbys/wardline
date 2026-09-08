@@ -227,6 +227,26 @@
       const qs = new URLSearchParams(params).toString();
       return request(`/v1/audit${qs ? `?${qs}` : ""}`);
     },
+
+    /** GET /v1/orgs/me — the caller's org, or null if they don't have one */
+    getMyOrg() {
+      return request("/v1/orgs/me");
+    },
+
+    /** POST /v1/orgs — body: { name }; caller becomes the owner */
+    createOrg({ name }) {
+      return request("/v1/orgs", { method: "POST", body: { name } });
+    },
+
+    /** GET /v1/orgs/members — owner-only */
+    getOrgMembers() {
+      return request("/v1/orgs/members");
+    },
+
+    /** POST /v1/orgs/invite — owner-only; body: { email, role } */
+    inviteToOrg({ email, role }) {
+      return request("/v1/orgs/invite", { method: "POST", body: { email, role } });
+    },
   };
 
   window.WardlineApi = WardlineApi;
