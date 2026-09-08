@@ -76,12 +76,13 @@ def answer(
     mode: str = "auto",
     filters: dict | None = None,
     max_sources: int = 12,
+    dek: bytes | None = None,
 ) -> dict:
     filters = filters or {}
     start = time.monotonic()
     user_id = user.id
 
-    session_id = audit.open_session(db, user_id, question, mode)
+    session_id = audit.open_session(db, user_id, question, mode, dek=dek)
 
     llm = get_llm_client()
     subquestions = planner.plan(llm, question)
