@@ -17,7 +17,7 @@ from fastapi import APIRouter, Depends, Header, HTTPException, Request
 from pydantic import BaseModel
 from sqlalchemy.orm import Session
 
-from wardline.api.deps import get_current_user, get_db
+from wardline.api.deps import get_current_user, get_db, get_vault_dek
 from wardline.common.config import get_settings
 from wardline.common.errors import AccessDeniedError
 from wardline.governance import accounts
@@ -50,6 +50,7 @@ class ForgotPasswordRequest(BaseModel):
 class ResetPasswordRequest(BaseModel):
     token: str
     new_password: str
+    recovery_code: str | None = None
 
 
 class MfaConfirmRequest(BaseModel):
@@ -82,10 +83,12 @@ def whoami(user: User = Depends(get_current_user)) -> dict:
 @limiter.limit(f"{get_settings().rate_limit_auth_per_minute}/minute")
 def signup(request: Request, body: SignupRequest, db: Session = Depends(get_db)) -> dict:
     try:
-        accounts.signup(db, email=body.email, password=body.password)
+        _user, recovery_codes = accounts.signup(db, email=body.email, password=body.password)
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"message": "check your email to verify your account"}
+    # recovery_codes is empty when the email was already registered (see
+    # accounts.signup's docstring) -- nothing to show a second "signup".
+    return {"message": "check your email to verify your account", "recovery_codes": recovery_codes}
 
 
 @router.post("/verify-email")
@@ -110,7 +113,7 @@ def login(request: Request, body: LoginRequest, db: Session = Depends(get_db)) -
         )
     except AccessDeniedError as exc:
         raise HTTPException(status_code=401, detail=str(exc)) from exc
-    api_key = accounts.mint_session_key(db, user)
+    api_key = accounts.mint_session_key(db, user, password=body.password)
     return {"api_key": api_key, "user_id": user.id, "role": user.role}
 
 
@@ -131,10 +134,14 @@ def forgot_password(request: Request, body: ForgotPasswordRequest, db: Session =
 @router.post("/password/reset")
 def reset_password_route(body: ResetPasswordRequest, db: Session = Depends(get_db)) -> dict:
     try:
-        accounts.reset_password(db, token=body.token, new_password=body.new_password)
+        recovery_codes = accounts.reset_password(
+            db, token=body.token, new_password=body.new_password, recovery_code=body.recovery_code
+        )
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    return {"message": "password updated"}
+    # Non-empty only when the vault's key had to be replaced (see
+    # accounts.reset_password's docstring) -- a fresh batch to show once.
+    return {"message": "password updated", "recovery_codes": recovery_codes}
 
 
 @router.post("/mfa/enroll")
@@ -145,10 +152,13 @@ def enroll_mfa(db: Session = Depends(get_db), user: User = Depends(get_current_u
 
 @router.post("/mfa/confirm")
 def confirm_mfa(
-    body: MfaConfirmRequest, db: Session = Depends(get_db), user: User = Depends(get_current_user)
+    body: MfaConfirmRequest,
+    db: Session = Depends(get_db),
+    user: User = Depends(get_current_user),
+    dek: bytes | None = Depends(get_vault_dek),
 ) -> dict:
     try:
-        codes = accounts.confirm_mfa(db, user, code=body.code)
+        codes = accounts.confirm_mfa(db, user, code=body.code, dek=dek)
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"recovery_codes": codes}
@@ -168,8 +178,13 @@ def disable_mfa(
 @router.post("/accept-invite")
 def accept_invite(body: AcceptInviteRequest, db: Session = Depends(get_db)) -> dict:
     try:
-        user = accounts.accept_invite(db, token=body.token, password=body.password)
+        user, recovery_codes = accounts.accept_invite(db, token=body.token, password=body.password)
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
-    api_key = accounts.mint_session_key(db, user)
-    return {"api_key": api_key, "user_id": user.id, "role": user.role}
+    api_key = accounts.mint_session_key(db, user, password=body.password)
+    return {
+        "api_key": api_key,
+        "user_id": user.id,
+        "role": user.role,
+        "recovery_codes": recovery_codes,
+    }

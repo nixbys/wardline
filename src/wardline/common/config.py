@@ -196,6 +196,27 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:5173"
     rate_limit_auth_per_minute: int = 10
 
+    # --- Encrypted conversation vault (commercialization roadmap Phase 2 / Pillar 2) ---
+    # Separate pepper from password_pepper/api_key_pepper on purpose, same
+    # "one leaked secret doesn't compromise every credential class" reasoning.
+    vault_enabled: bool = True
+    vault_pepper: str = Field(
+        default="dev-only-insecure-vault-pepper-change-me",
+        description="Server-side secret mixed into vault key derivation. MUST be overridden in any real deployment.",
+    )
+    vault_session_secret: str = Field(
+        default="dev-only-insecure-vault-session-secret-change-me",
+        description=(
+            "Wraps a user's vault data-encryption key for an active login session's "
+            "lifetime (security/vault.py's session bridge) -- rotating this "
+            "force-invalidates every live session's vault access without affecting "
+            "login itself. MUST be overridden in any real deployment."
+        ),
+    )
+    vault_kdf_time_cost: int = 3
+    vault_kdf_memory_cost_kib: int = 65536  # 64 MiB
+    vault_kdf_parallelism: int = 4
+
     # --- Outbound email (verification/reset/invite links) ---
     # "mock" (default) logs the message instead of sending it, matching
     # this project's existing LLM_CLIENT_MODE=mock convention -- local dev
@@ -255,6 +276,21 @@ class Settings(BaseSettings):
     # --- Iceberg analytical export (storage/iceberg_export.py) ---
     iceberg_export_enabled: bool = True
     iceberg_export_interval_seconds: int = 21600  # 6 hours
+
+    # --- Iceberg export signing (commercialization roadmap Phase 2 / Pillar
+    # 3.3): ML-DSA-signs a small receipt over each export run, a real
+    # post-quantum *integrity* claim -- distinct from, and much cheaper than,
+    # an encryption claim. Off by default: needs a keypair generated first
+    # (`wardline generate-iceberg-signing-key`) before there's a seed to set.
+    iceberg_export_signing_enabled: bool = False
+    iceberg_signing_key_seed: str | None = Field(
+        default=None,
+        description=(
+            "Base64-encoded 32-byte ML-DSA-65 private key seed "
+            "(wardline generate-iceberg-signing-key). A real secret -- "
+            "/run/secrets-mountable like every other secret here."
+        ),
+    )
 
     # --- Entity resolution ---
     # Periodic Splink batch dedupe pass (graph/entity_resolution/splink_batch.py),

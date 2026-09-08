@@ -20,6 +20,7 @@ from wardline.common.config import get_settings
 from wardline.common.errors import AccessDeniedError, KillSwitchEngagedError
 from wardline.common.security import lookup_key_for_index, verify_api_key
 from wardline.governance import pep, rbac
+from wardline.security import vault
 from wardline.storage.db import sync_session
 from wardline.storage.models.base import utcnow
 from wardline.storage.models.governance import ApiKey, User
@@ -99,6 +100,44 @@ def get_current_user_active(
     except KillSwitchEngagedError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     return user
+
+
+def get_vault_dek(
+    authorization: str | None = Header(default=None), db: Session = Depends(get_db)
+) -> bytes | None:
+    """Resolves the current request's vault data-encryption key via the
+    session bridge (governance/accounts.mint_session_key — commercialization
+    roadmap Phase 2), when one exists. None — not an error — for an OIDC
+    user (never went through mint_session_key), a long-lived API key (only
+    ever session-scoped keys get bridged), a user with no vault, or a
+    session that never bridged one. Routes that touch vault content take
+    this as a second dependency alongside get_current_user; most routes
+    don't need it at all.
+
+    Deliberately a second, independent lookup rather than reusing
+    get_current_user's — that keeps this auth chokepoint's own logic
+    untouched, at the cost of one extra query on the requests that do
+    need a DEK."""
+    if not authorization or not authorization.startswith("Bearer "):
+        return None
+    if get_settings().auth_mode == "oidc":
+        return None
+    token = authorization[len("Bearer ") :]
+    api_key = (
+        db.query(ApiKey)
+        .filter(ApiKey.lookup_hash == lookup_key_for_index(token), ApiKey.revoked.is_(False))
+        .first()
+    )
+    if api_key is None or not verify_api_key(token, api_key.key_hash):
+        return None
+    if api_key.vault_dek_wrapped is None or api_key.vault_dek_nonce is None:
+        return None
+    try:
+        return vault.unwrap_for_session(
+            api_key.vault_dek_nonce, api_key.vault_dek_wrapped, aad=api_key.id
+        )
+    except vault.VaultError:
+        return None
 
 
 def require_role(*roles: str):
