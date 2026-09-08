@@ -59,6 +59,16 @@
     billingPlanLabel: document.getElementById("billingPlanLabel"),
     billingPortalBtn: document.getElementById("billingPortalBtn"),
 
+    orgStatusLabel: document.getElementById("orgStatusLabel"),
+    orgNoneState: document.getElementById("orgNoneState"),
+    orgNameInput: document.getElementById("orgNameInput"),
+    orgCreateBtn: document.getElementById("orgCreateBtn"),
+    orgOwnerState: document.getElementById("orgOwnerState"),
+    orgMemberList: document.getElementById("orgMemberList"),
+    orgInviteEmail: document.getElementById("orgInviteEmail"),
+    orgInviteRole: document.getElementById("orgInviteRole"),
+    orgInviteBtn: document.getElementById("orgInviteBtn"),
+
     uploadModal: document.getElementById("uploadModal"),
     dropzone: document.getElementById("dropzone"),
     dropzoneLabel: document.getElementById("dropzoneLabel"),
@@ -196,6 +206,7 @@
   }
 
   async function refreshBillingLabel() {
+    els.billingPortalBtn.hidden = false;
     if (!WardlineApi.isConfigured()) {
       els.billingPlanLabel.textContent = "Sign in to see your plan.";
       return;
@@ -203,7 +214,18 @@
     try {
       const sub = await WardlineApi.getSubscription();
       const statusNote = sub.status !== "active" ? ` (${sub.status})` : "";
-      els.billingPlanLabel.textContent = `Current plan: ${sub.plan}${statusNote}`;
+      // org_id set means this plan was bought once by the org's owner and
+      // covers every member -- not billed to this person individually.
+      let scopeNote = "";
+      if (sub.org_id) {
+        scopeNote = " — shared with your organization";
+        const [org, me] = await Promise.all([WardlineApi.getMyOrg(), WardlineApi.me()]);
+        // Only the owner can manage it (governance/billing.py enforces
+        // this server-side too) -- hide the button rather than show one
+        // that would just 403 for everyone else.
+        els.billingPortalBtn.hidden = !(org && org.owner_user_id === me.user_id);
+      }
+      els.billingPlanLabel.textContent = `Current plan: ${sub.plan}${statusNote}${scopeNote}`;
     } catch {
       els.billingPlanLabel.textContent = "Could not load billing status.";
     }
@@ -218,6 +240,62 @@
     }
   });
 
+  async function refreshOrgState() {
+    els.orgNoneState.hidden = true;
+    els.orgOwnerState.hidden = true;
+    if (!WardlineApi.isConfigured()) {
+      els.orgStatusLabel.textContent = "Sign in to see your organization.";
+      return;
+    }
+    try {
+      const [org, me] = await Promise.all([WardlineApi.getMyOrg(), WardlineApi.me()]);
+      if (!org) {
+        els.orgStatusLabel.textContent = "You're not part of an organization yet.";
+        els.orgNoneState.hidden = false;
+        return;
+      }
+      const isOwner = org.owner_user_id === me.user_id;
+      if (!isOwner) {
+        els.orgStatusLabel.textContent = `Member of ${org.name}. Ask your organization's owner to manage members or billing.`;
+        return;
+      }
+      els.orgStatusLabel.textContent = `You own ${org.name}.`;
+      els.orgOwnerState.hidden = false;
+      const members = await WardlineApi.getOrgMembers();
+      els.orgMemberList.innerHTML = members
+        .map((m) => `<span>${m.email} — ${m.role}</span>`)
+        .join("");
+    } catch {
+      els.orgStatusLabel.textContent = "Could not load organization status.";
+    }
+  }
+
+  els.orgCreateBtn.addEventListener("click", async () => {
+    const name = els.orgNameInput.value.trim();
+    if (!name) return;
+    try {
+      await WardlineApi.createOrg({ name });
+      els.orgNameInput.value = "";
+      toast("Organization created.", "success");
+      refreshOrgState();
+    } catch (err) {
+      toast(err.message, "danger");
+    }
+  });
+
+  els.orgInviteBtn.addEventListener("click", async () => {
+    const email = els.orgInviteEmail.value.trim();
+    const role = els.orgInviteRole.value;
+    if (!email) return;
+    try {
+      await WardlineApi.inviteToOrg({ email, role });
+      els.orgInviteEmail.value = "";
+      toast(`Invite sent to ${email}.`, "success");
+    } catch (err) {
+      toast(err.message, "danger");
+    }
+  });
+
   function openSettings() {
     const { baseUrl, apiKey } = WardlineApi.getConfig();
     els.baseUrlInput.value = baseUrl;
@@ -226,6 +304,7 @@
     resetMfaPanels();
     refreshMfaState();
     refreshBillingLabel();
+    refreshOrgState();
     openModal(els.settingsModal);
   }
 
