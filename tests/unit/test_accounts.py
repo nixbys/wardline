@@ -21,8 +21,9 @@ from sqlalchemy.types import JSON
 
 from wardline.common.errors import AccessDeniedError
 from wardline.governance import accounts, mfa
+from wardline.security import vault
 from wardline.storage.models.base import Base
-from wardline.storage.models.governance import ApiKey, AuthToken, RecoveryCode, User
+from wardline.storage.models.governance import ApiKey, AuthToken, RecoveryCode, User, VaultKey
 
 
 @compiles(JSONB, "sqlite")
@@ -34,7 +35,14 @@ def _compile_jsonb_as_json_on_sqlite(element, compiler, **kw):  # pragma: no cov
 def db():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(
-        engine, tables=[User.__table__, ApiKey.__table__, AuthToken.__table__, RecoveryCode.__table__]
+        engine,
+        tables=[
+            User.__table__,
+            ApiKey.__table__,
+            AuthToken.__table__,
+            RecoveryCode.__table__,
+            VaultKey.__table__,
+        ],
     )
     with Session(engine) as session:
         yield session
@@ -44,7 +52,7 @@ def db():
 
 
 def test_signup_creates_unverified_user_with_hashed_password(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     assert user.email == "a@example.com"
     assert user.email_verified_at is None
     assert user.password_hash != "correct-horse-battery"
@@ -56,19 +64,30 @@ def test_signup_rejects_weak_password(db):
 
 
 def test_signup_does_not_create_a_duplicate_for_an_existing_email(db):
-    first = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
-    second = accounts.signup(db, email="a@example.com", password="a-totally-different-password")
+    first, _ = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    second, _ = accounts.signup(db, email="a@example.com", password="a-totally-different-password")
     assert first.id == second.id
 
 
+def test_signup_does_not_reissue_recovery_codes_for_an_existing_email(db):
+    """The anti-enumeration early-return: a second "signup" for an email
+    that's already registered must not hand out a fresh batch of live
+    escrow codes to whoever made the request."""
+    accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    _second, codes = accounts.signup(db, email="a@example.com", password="a-different-password")
+    assert codes == []
+
+
 def test_verify_email_activates_the_account(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     token = db.query(AuthToken).filter(AuthToken.user_id == user.id).first()
     # accounts.signup only returns the User, not the plaintext link, so pull
     # the plaintext the same way the emailed link would carry it: we don't
     # have it (only the hash is stored) -- so exercise the private issuance
     # helper directly to get a token whose plaintext we actually hold.
-    plaintext = accounts._issue_token_and_link(db, user, purpose="email_verify", path="/verify-email")
+    plaintext = accounts._issue_token_and_link(
+        db, user, purpose="email_verify", path="/verify-email"
+    )
     plaintext = plaintext.rsplit("token=", 1)[1]
     verified = accounts.verify_email(db, token=plaintext)
     assert verified.email_verified_at is not None
@@ -76,7 +95,7 @@ def test_verify_email_activates_the_account(db):
 
 
 def test_verify_email_rejects_reused_token(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     link = accounts._issue_token_and_link(db, user, purpose="email_verify", path="/verify-email")
     token = link.rsplit("token=", 1)[1]
     accounts.verify_email(db, token=token)
@@ -113,7 +132,7 @@ def test_login_fails_identically_for_unknown_email(db):
 
 
 def test_login_fails_for_revoked_user(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     user.revoked = True
     db.flush()
     with pytest.raises(AccessDeniedError):
@@ -121,7 +140,7 @@ def test_login_fails_for_revoked_user(db):
 
 
 def test_login_requires_mfa_code_once_enabled(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     uri = accounts.enroll_mfa(db, user)
     secret = user.mfa_secret
     assert secret in uri
@@ -139,7 +158,7 @@ def test_login_requires_mfa_code_once_enabled(db):
 
 
 def test_login_accepts_a_recovery_code_and_consumes_it(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     accounts.enroll_mfa(db, user)
     codes = accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now())
 
@@ -156,7 +175,7 @@ def test_login_accepts_a_recovery_code_and_consumes_it(db):
 
 
 def test_logout_revokes_only_the_session_key_used(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     session_key = accounts.mint_session_key(db, user)
     from wardline.common.security import generate_api_key, lookup_key_for_index
 
@@ -177,17 +196,121 @@ def test_logout_revokes_only_the_session_key_used(db):
         db.query(ApiKey).filter(ApiKey.lookup_hash == lookup_key_for_index(session_key)).first()
     )
     permanent_row = (
-        db.query(ApiKey).filter(ApiKey.lookup_hash == lookup_key_for_index(permanent_plaintext)).first()
+        db.query(ApiKey)
+        .filter(ApiKey.lookup_hash == lookup_key_for_index(permanent_plaintext))
+        .first()
     )
     assert session_row.revoked is True
     assert permanent_row.revoked is False
+
+
+# --- vault provisioning + session bridge (commercialization roadmap Phase 2) --
+
+
+def test_signup_provisions_a_vault_and_wraps_it_into_every_recovery_code(db):
+    user, codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    from wardline.common.config import get_settings
+
+    assert len(codes) == get_settings().recovery_code_count
+    vault_key = db.query(VaultKey).filter(VaultKey.user_id == user.id).first()
+    assert vault_key is not None
+
+    rows = db.query(RecoveryCode).filter(RecoveryCode.user_id == user.id).all()
+    assert len(rows) == len(codes)
+    assert all(r.vault_wrapped_dek is not None for r in rows)
+
+    # The password-derived KEK unwraps VaultKey to the same DEK any of the
+    # codes' own KEK unwraps to -- they're escrowing the same secret.
+    password_kek = vault.derive_kek("correct-horse-battery", salt=vault_key.kdf_salt)
+    dek_via_password = vault.unwrap(
+        password_kek, vault_key.wrapped_dek_nonce, vault_key.wrapped_dek, aad=user.id
+    )
+    record = next(r for r in rows if r.code_hash == accounts._hash_recovery_code(codes[0]))
+    code_kek = vault.derive_kek(codes[0], salt=record.id.encode("utf-8"))
+    dek_via_code = vault.unwrap(
+        code_kek, record.vault_wrapped_dek_nonce, record.vault_wrapped_dek, aad=record.id
+    )
+    assert dek_via_password == dek_via_code
+
+
+def test_login_bridges_the_vault_key_onto_the_session_and_logout_clears_it(db):
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    logged_in = accounts.authenticate(db, email="a@example.com", password="correct-horse-battery")
+    session_key = accounts.mint_session_key(db, logged_in, password="correct-horse-battery")
+
+    row = db.query(ApiKey).filter(ApiKey.user_id == user.id).first()
+    assert row.vault_dek_wrapped is not None
+    assert row.vault_dek_nonce is not None
+    resolved = vault.unwrap_for_session(row.vault_dek_nonce, row.vault_dek_wrapped, aad=row.id)
+
+    vault_key = db.query(VaultKey).filter(VaultKey.user_id == user.id).first()
+    kek = vault.derive_kek("correct-horse-battery", salt=vault_key.kdf_salt)
+    expected = vault.unwrap(kek, vault_key.wrapped_dek_nonce, vault_key.wrapped_dek, aad=user.id)
+    assert resolved == expected
+
+    accounts.logout(db, token=session_key)
+    db.refresh(row)
+    assert row.vault_dek_wrapped is None
+    assert row.vault_dek_nonce is None
+
+
+def test_mint_session_key_without_a_password_does_not_bridge_the_vault(db):
+    """A long-lived/admin-minted key, or any caller that doesn't pass the
+    plaintext password, must not end up with a usable vault bridge."""
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    accounts.mint_session_key(db, user)
+    row = db.query(ApiKey).filter(ApiKey.user_id == user.id).first()
+    assert row.vault_dek_wrapped is None
+    assert row.vault_dek_nonce is None
+
+
+def test_confirm_mfa_wraps_the_session_dek_into_its_fresh_codes(db):
+    user, _signup_codes = accounts.signup(
+        db, email="a@example.com", password="correct-horse-battery"
+    )
+    accounts.enroll_mfa(db, user)
+
+    logged_in = accounts.authenticate(db, email="a@example.com", password="correct-horse-battery")
+    accounts.mint_session_key(db, logged_in, password="correct-horse-battery")
+    row = db.query(ApiKey).filter(ApiKey.user_id == user.id).first()
+    dek = vault.unwrap_for_session(row.vault_dek_nonce, row.vault_dek_wrapped, aad=row.id)
+
+    codes = accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now(), dek=dek)
+    fresh_rows = (
+        db.query(RecoveryCode)
+        .filter(
+            RecoveryCode.user_id == user.id,
+            RecoveryCode.code_hash.in_([accounts._hash_recovery_code(c) for c in codes]),
+        )
+        .all()
+    )
+    assert len(fresh_rows) == len(codes)
+    assert all(r.vault_wrapped_dek is not None for r in fresh_rows)
+
+
+def test_confirm_mfa_without_a_dek_issues_codes_with_no_vault_wrap(db):
+    """No live session bridge (e.g. this call happened outside a
+    vault-aware request) -- codes still get issued, just without vault
+    escrow, rather than failing the whole MFA confirmation."""
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    accounts.enroll_mfa(db, user)
+    codes = accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now())
+    rows = (
+        db.query(RecoveryCode)
+        .filter(
+            RecoveryCode.user_id == user.id,
+            RecoveryCode.code_hash.in_([accounts._hash_recovery_code(c) for c in codes]),
+        )
+        .all()
+    )
+    assert all(r.vault_wrapped_dek is None for r in rows)
 
 
 # --- password reset --------------------------------------------------
 
 
 def test_reset_password_updates_hash_and_revokes_session_keys_only(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     session_key = accounts.mint_session_key(db, user)
     from wardline.common.security import generate_api_key, lookup_key_for_index
 
@@ -202,7 +325,9 @@ def test_reset_password_updates_hash_and_revokes_session_keys_only(db):
     )
     db.flush()
 
-    link = accounts._issue_token_and_link(db, user, purpose="password_reset", path="/reset-password")
+    link = accounts._issue_token_and_link(
+        db, user, purpose="password_reset", path="/reset-password"
+    )
     token = link.rsplit("token=", 1)[1]
     accounts.reset_password(db, token=token, new_password="a-brand-new-strong-password")
 
@@ -214,7 +339,9 @@ def test_reset_password_updates_hash_and_revokes_session_keys_only(db):
         db.query(ApiKey).filter(ApiKey.lookup_hash == lookup_key_for_index(session_key)).first()
     )
     permanent_row = (
-        db.query(ApiKey).filter(ApiKey.lookup_hash == lookup_key_for_index(permanent_plaintext)).first()
+        db.query(ApiKey)
+        .filter(ApiKey.lookup_hash == lookup_key_for_index(permanent_plaintext))
+        .first()
     )
     assert session_row.revoked is True
     assert permanent_row.revoked is False
@@ -224,18 +351,110 @@ def test_request_password_reset_does_not_raise_for_unknown_email(db):
     accounts.request_password_reset(db, email="nobody@example.com")  # must not raise
 
 
+def test_reset_password_with_a_valid_recovery_code_keeps_the_same_vault_key(db):
+    user, signup_codes = accounts.signup(
+        db, email="a@example.com", password="correct-horse-battery"
+    )
+    vault_key_before = db.query(VaultKey).filter(VaultKey.user_id == user.id).first()
+    kek_before = vault.derive_kek("correct-horse-battery", salt=vault_key_before.kdf_salt)
+    dek_before = vault.unwrap(
+        kek_before, vault_key_before.wrapped_dek_nonce, vault_key_before.wrapped_dek, aad=user.id
+    )
+
+    link = accounts._issue_token_and_link(
+        db, user, purpose="password_reset", path="/reset-password"
+    )
+    token = link.rsplit("token=", 1)[1]
+    fresh_codes = accounts.reset_password(
+        db, token=token, new_password="a-brand-new-strong-password", recovery_code=signup_codes[0]
+    )
+    assert fresh_codes == []  # the DEK didn't change, so no new batch was needed
+
+    vault_key_after = db.query(VaultKey).filter(VaultKey.user_id == user.id).first()
+    kek_after = vault.derive_kek("a-brand-new-strong-password", salt=vault_key_after.kdf_salt)
+    dek_after = vault.unwrap(
+        kek_after, vault_key_after.wrapped_dek_nonce, vault_key_after.wrapped_dek, aad=user.id
+    )
+    assert dek_after == dek_before
+
+    # The redeemed code is now spent.
+    with pytest.raises(AccessDeniedError, match="invalid or already-used"):
+        accounts._redeem_recovery_code(db, user, signup_codes[0])
+
+
+def test_reset_password_without_a_code_orphans_the_old_vault_and_issues_fresh_codes(db):
+    user, signup_codes = accounts.signup(
+        db, email="a@example.com", password="correct-horse-battery"
+    )
+    vault_key_before = db.query(VaultKey).filter(VaultKey.user_id == user.id).first()
+    kek_before = vault.derive_kek("correct-horse-battery", salt=vault_key_before.kdf_salt)
+    dek_before = vault.unwrap(
+        kek_before, vault_key_before.wrapped_dek_nonce, vault_key_before.wrapped_dek, aad=user.id
+    )
+
+    link = accounts._issue_token_and_link(
+        db, user, purpose="password_reset", path="/reset-password"
+    )
+    token = link.rsplit("token=", 1)[1]
+    fresh_codes = accounts.reset_password(
+        db, token=token, new_password="a-brand-new-strong-password"
+    )
+    assert len(fresh_codes) > 0
+    assert set(fresh_codes).isdisjoint(signup_codes)
+
+    vault_key_after = db.query(VaultKey).filter(VaultKey.user_id == user.id).first()
+    kek_after = vault.derive_kek("a-brand-new-strong-password", salt=vault_key_after.kdf_salt)
+    dek_after = vault.unwrap(
+        kek_after, vault_key_after.wrapped_dek_nonce, vault_key_after.wrapped_dek, aad=user.id
+    )
+    assert dek_after != dek_before  # the old DEK is now orphaned/unreachable
+
+    # Every original signup-time code is void now (used_at set), even
+    # though none of them were ever actually redeemed by anyone.
+    original_rows = (
+        db.query(RecoveryCode)
+        .filter(
+            RecoveryCode.user_id == user.id,
+            RecoveryCode.code_hash.in_([accounts._hash_recovery_code(c) for c in signup_codes]),
+        )
+        .all()
+    )
+    assert all(r.used_at is not None for r in original_rows)
+
+    # The fresh batch wraps the *new* DEK.
+    fresh_rows = (
+        db.query(RecoveryCode)
+        .filter(
+            RecoveryCode.user_id == user.id,
+            RecoveryCode.code_hash.in_([accounts._hash_recovery_code(c) for c in fresh_codes]),
+        )
+        .all()
+    )
+    record = fresh_rows[0]
+    code_kek = vault.derive_kek(
+        next(c for c in fresh_codes if accounts._hash_recovery_code(c) == record.code_hash),
+        salt=record.id.encode("utf-8"),
+    )
+    dek_via_fresh_code = vault.unwrap(
+        code_kek, record.vault_wrapped_dek_nonce, record.vault_wrapped_dek, aad=record.id
+    )
+    assert dek_via_fresh_code == dek_after
+
+
 # --- MFA enroll/confirm/disable -----------------------------------------
 
 
 def test_confirm_mfa_rejects_wrong_code(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     accounts.enroll_mfa(db, user)
     with pytest.raises(AccessDeniedError, match="invalid verification code"):
         accounts.confirm_mfa(db, user, code="000000")
 
 
 def test_confirm_mfa_issues_the_configured_number_of_recovery_codes(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _signup_codes = accounts.signup(
+        db, email="a@example.com", password="correct-horse-battery"
+    )
     accounts.enroll_mfa(db, user)
     codes = accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now())
     from wardline.common.config import get_settings
@@ -245,7 +464,7 @@ def test_confirm_mfa_issues_the_configured_number_of_recovery_codes(db):
 
 
 def test_disable_mfa_requires_a_valid_code_or_recovery_code(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+    user, _codes = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
     accounts.enroll_mfa(db, user)
     accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now())
 
@@ -257,23 +476,28 @@ def test_disable_mfa_requires_a_valid_code_or_recovery_code(db):
     assert user.mfa_secret is None
 
 
-def test_disable_mfa_via_recovery_code_and_clears_unused_codes(db):
-    user = accounts.signup(db, email="a@example.com", password="correct-horse-battery")
+def test_disable_mfa_via_recovery_code_leaves_other_unused_codes_intact(db):
+    """Recovery codes are no longer MFA-exclusive (commercialization
+    roadmap Phase 2) -- they're also this account's vault-escrow secret,
+    generated independently at signup. Disabling MFA used to delete every
+    unused code; now it must only consume the one actually redeemed."""
+    user, signup_codes = accounts.signup(
+        db, email="a@example.com", password="correct-horse-battery"
+    )
     accounts.enroll_mfa(db, user)
-    codes = accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now())
+    mfa_codes = accounts.confirm_mfa(db, user, code=mfa.pyotp.TOTP(user.mfa_secret).now())
 
-    accounts.disable_mfa(db, user, code=None, recovery_code=codes[0])
+    accounts.disable_mfa(db, user, code=None, recovery_code=mfa_codes[0])
     assert user.mfa_enabled is False
-    # The just-redeemed code (codes[0]) is deliberately left in place as a
-    # used record, not deleted -- disable_mfa only purges the ones that
-    # never got used and are now moot. So the right assertion is "no
-    # *unused* codes remain", not "no rows remain".
+
     remaining_unused = (
         db.query(RecoveryCode)
         .filter(RecoveryCode.user_id == user.id, RecoveryCode.used_at.is_(None))
         .count()
     )
-    assert remaining_unused == 0
+    # Everything issued (signup batch + MFA-confirm batch) minus the one
+    # code just redeemed is still sitting there, unused and usable.
+    assert remaining_unused == len(signup_codes) + len(mfa_codes) - 1
 
 
 # --- invites ------------------------------------------------------------
@@ -282,9 +506,11 @@ def test_disable_mfa_via_recovery_code_and_clears_unused_codes(db):
 def test_invite_and_accept_invite_activates_the_account(db):
     link = accounts.create_invite(db, email="teammate@example.com", role="analyst")
     token = link.rsplit("token=", 1)[1]
-    user = accounts.accept_invite(db, token=token, password="a-strong-invited-password")
+    user, codes = accounts.accept_invite(db, token=token, password="a-strong-invited-password")
     assert user.role == "analyst"
     assert user.email_verified_at is not None
+    assert len(codes) > 0
+    assert db.query(VaultKey).filter(VaultKey.user_id == user.id).first() is not None
     accounts.authenticate(db, email="teammate@example.com", password="a-strong-invited-password")
 
 
