@@ -277,6 +277,21 @@ class Settings(BaseSettings):
     iceberg_export_enabled: bool = True
     iceberg_export_interval_seconds: int = 21600  # 6 hours
 
+    # --- Iceberg export signing (commercialization roadmap Phase 2 / Pillar
+    # 3.3): ML-DSA-signs a small receipt over each export run, a real
+    # post-quantum *integrity* claim -- distinct from, and much cheaper than,
+    # an encryption claim. Off by default: needs a keypair generated first
+    # (`wardline generate-iceberg-signing-key`) before there's a seed to set.
+    iceberg_export_signing_enabled: bool = False
+    iceberg_signing_key_seed: str | None = Field(
+        default=None,
+        description=(
+            "Base64-encoded 32-byte ML-DSA-65 private key seed "
+            "(wardline generate-iceberg-signing-key). A real secret -- "
+            "/run/secrets-mountable like every other secret here."
+        ),
+    )
+
     # --- Entity resolution ---
     # Periodic Splink batch dedupe pass (graph/entity_resolution/splink_batch.py),
     # complementing the synchronous per-mention resolver used at ingestion time.
