@@ -122,7 +122,7 @@ pytesseract==0.3.13
 pytest==9.1.1
 pytest-asyncio==1.4.0
 python-dateutil==2.9.0.post0
-python-dotenv==1.2.2
+python-dotenv==1.2.3
 python-jose==3.5.0
 python-multipart==0.0.32
 pytz==2026.2
