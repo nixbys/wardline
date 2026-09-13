@@ -15,6 +15,7 @@ htmlcov/
 .coverage
 dist/
 build/
+node_modules/
 data/bronze/
 data/iceberg-warehouse/
 *.log

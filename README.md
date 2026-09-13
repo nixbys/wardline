@@ -19,6 +19,7 @@ This is the buildable translation of a fictional "omniscient" information engine
 - [How to use it](#how-to-use-it)
 - [Adding a new source](#adding-a-new-source)
 - [Authorized pentesting connectors](#authorized-pentesting-connectors)
+- [Live Globe](#live-globe)
 - [Self-serve accounts](#self-serve-accounts)
 - [Billing](#billing)
 - [Governance](#governance)
@@ -240,6 +241,12 @@ Both are ingested through the normal pipeline (chunked, embedded, queryable, cit
 - **Third-party API Terms of Service**: Shodan's (and VirusTotal's/OTX's, if added later) ToS govern redistribution/resale of data their APIs return — review those before this connector's output feeds anything a paying customer sees.
 - **This is active tooling, not just OSINT anymore**: `nmap` actively probes whatever target its engagement scopes — only ever point it at infrastructure you have explicit, documented authorization to test. See `docs/COMMERCIALIZATION_ROADMAP.md` for the compliance/insurance groundwork this implies before selling it as a product.
 
+## Live Globe
+
+`globe/` is a public, no-login CesiumJS 3D view of live flights, vessels, satellites, and traffic — public data, the same trust tier as the marketing pages, not the research console. It's an original build inspired by [bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view) (MIT, credited in-app and in `THIRD_PARTY_NOTICES.md`), talking to `src/wardline/api/routers/globe.py` — a thin, rate-limited, unauthenticated proxy so no visitor needs their own OpenSky/AISStream/TomTom/OpenAI key. Aircraft and satellites work with zero configuration; vessels/traffic/voice each need one optional key (`AISSTREAM_API_KEY`, `TOMTOM_API_KEY`, `OPENAI_API_KEY`) and degrade gracefully — `GET /v1/globe/config` reports which layers are actually usable — without one. See `globe/README.md` to run it.
+
+This is deliberately a slice of what the upstream project does, not a full port — see [`docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md`](docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md) for the fuller integration plan (a real fork, [nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view), consumed via its own subpath exports rather than vendored) and why it doesn't fit in one pass. Two of its citable data sources — USGS earthquakes and NASA FIRMS fire detections — are also real ingestion `Connector`s (`connectors/usgs_earthquakes.py`, `connectors/nasa_firms.py`), separate from the live-only globe view, since a discrete timestamped event is something a RAG answer can actually cite and a continuously-updating position isn't.
+
 ## Self-serve accounts
 
 Two identity paths coexist, for two different kinds of caller: an admin still mints CLI/API keys directly (`create-admin-user`, `POST /v1/admin/users`) for scripts and service accounts, while a real person gets a password + optional MFA through `POST /v1/auth/*` (`src/wardline/governance/accounts.py`) — signing up, verifying email, logging in, resetting a forgotten password, and enabling TOTP two-factor with backup recovery codes. `web/login.html` is the UI for this; `web/app.html`'s "Sign in" prompt links to it.
@@ -369,4 +376,6 @@ privately — please don't open a public issue for a suspected vulnerability.
 
 Apache License 2.0 — see [`LICENSE`](LICENSE). This includes an explicit patent grant, which
 matters given the security-tooling surface area ([Authorized pentesting
-connectors](#authorized-pentesting-connectors)) this repo ships.
+connectors](#authorized-pentesting-connectors)) this repo ships. Third-party code this repo is
+inspired by or depends on beyond ordinary open-source dependencies is credited in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

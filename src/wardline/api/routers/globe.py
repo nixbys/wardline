@@ -31,6 +31,7 @@ from datetime import UTC, datetime
 
 import httpx
 from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi.responses import PlainTextResponse
 
 from wardline.common.config import get_settings
 from wardline.common.logging import get_logger
@@ -146,22 +147,32 @@ async def opensky_states(
 
 @router.get("/celestrak")
 @limiter.limit(f"{get_settings().rate_limit_globe_per_minute}/minute")
-async def celestrak_gp(request: Request, group: str = Query(default="stations")) -> list:
+async def celestrak_gp(
+    request: Request, group: str = Query(default="stations"), format: str = Query(default="json")
+):
+    """`format=json` is a plain snapshot (no velocity, fine for a label
+    list); `format=tle` returns the raw two-line-element text the frontend
+    feeds to `satellite.js` for real SGP4 position propagation -- CelesTrak
+    has no JSON shape that carries the orbital elements SGP4 needs, only
+    the classic TLE/OMM text formats."""
     if group not in _CELESTRAK_GROUPS:
         raise HTTPException(status_code=400, detail=f"group must be one of {sorted(_CELESTRAK_GROUPS)}")
-    cache_key = f"celestrak:{group}"
+    if format not in ("json", "tle"):
+        raise HTTPException(status_code=400, detail="format must be 'json' or 'tle'")
+    cache_key = f"celestrak:{group}:{format}"
 
-    async def fetch() -> list:
+    async def fetch():
         async with httpx.AsyncClient(timeout=10.0) as client:
-            resp = await client.get(CELESTRAK_URL, params={"GROUP": group, "FORMAT": "json"})
+            resp = await client.get(CELESTRAK_URL, params={"GROUP": group, "FORMAT": format})
             resp.raise_for_status()
-            return resp.json()
+            return resp.json() if format == "json" else resp.text
 
     try:
-        return await _cached(cache_key, fetch)
+        result = await _cached(cache_key, fetch)
     except httpx.HTTPError as exc:
         logger.error("globe.celestrak_failed", error=str(exc))
         raise HTTPException(status_code=502, detail="celestrak upstream unavailable") from exc
+    return PlainTextResponse(result) if format == "tle" else result
 
 
 @router.get("/traffic")

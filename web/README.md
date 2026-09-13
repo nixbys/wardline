@@ -67,6 +67,7 @@ client-only:
 | "Inspect session" panel | `GET /v1/session/{id}` |
 | Upload a document | `POST /v1/documents/upload` (multipart) |
 | Connection status dot | `GET /healthz` |
+| Live Globe link (nav, sidebar) | Points at `/globe/` — a separate app (`globe/`), not part of this directory; see its own README |
 | Chat history sidebar | **client-side only** — `localStorage`, keyed by the `session_id` each query returns. `GET /v1/session/{id}` doesn't echo the rendered answer back (only audit metadata: retrieved chunk ids, latency, token cost), so the transcript itself lives in the browser, not the server. |
 
 No telemetry, no third-party requests — the only network calls this page
