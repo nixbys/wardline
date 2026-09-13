@@ -50,3 +50,26 @@ class IngestionJob(Base, TimestampMixin):
         Index("ix_ingestion_jobs_status", "status"),
         Index("ix_ingestion_jobs_connector_name", "connector_name"),
     )
+
+
+class JobLogLine(Base, TimestampMixin):
+    """Per-step progress lines for one `IngestionJob` (the Ops Console's
+    live "terminal" tail — `api/routers/admin_connectors.py`'s
+    `GET /jobs/{id}/log?after_id=`). A plain auto-incrementing integer id,
+    unlike this codebase's usual `new_id()`-prefixed string ids: cursor-
+    based polling needs a strictly-ordered, comparable id ("give me
+    everything after N"), which a random id can't provide. Written by
+    `worker/job_log.log_job_event` -- see that module for why per-item
+    lines are capped rather than unbounded.
+    """
+
+    __tablename__ = "job_log_lines"
+
+    id: Mapped[int] = mapped_column(Integer, primary_key=True, autoincrement=True)
+    job_id: Mapped[str] = mapped_column(
+        String(64), ForeignKey("ingestion_jobs.id", ondelete="CASCADE"), nullable=False
+    )
+    level: Mapped[str] = mapped_column(String(16), default="info")  # "info" | "error"
+    message: Mapped[str] = mapped_column(Text, nullable=False)
+
+    __table_args__ = (Index("ix_job_log_lines_job_id", "job_id"),)

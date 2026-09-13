@@ -25,7 +25,7 @@ from wardline.storage.models.governance import (
     VaultKey,
 )
 from wardline.storage.models.iceberg import IcebergExportReceipt
-from wardline.storage.models.ingestion import IngestionJob, Source
+from wardline.storage.models.ingestion import IngestionJob, JobLogLine, Source
 from wardline.storage.models.orgs import Organization
 
 __all__ = [
@@ -45,6 +45,7 @@ __all__ = [
     "Feedback",
     "IcebergExportReceipt",
     "IngestionJob",
+    "JobLogLine",
     "Organization",
     "RecoveryCode",
     "Source",
