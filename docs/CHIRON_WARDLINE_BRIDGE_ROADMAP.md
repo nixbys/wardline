@@ -2,6 +2,8 @@
 
 *Written 2026-09-13, after integrating SpiderFoot into wardline and checking chiron's actual architecture (not just its README) to see what "side by side" really requires.*
 
+*See [`MASTER_ROADMAP.md`](MASTER_ROADMAP.md) for how this track relates to the other two roadmap documents in this repo and what's actually being worked on next across all three.*
+
 ## Why this document exists
 
 Wardline's README already treats [chiron](https://github.com/nixbys/chiron) as a sibling project whose tool *categories* are worth matching (`shodan`, `nmap`) without vendoring its AGPL-3.0 code — calling an independently-licensed service over a network boundary instead. Asked directly, the goal is for the two projects to run **side by side**: cooperating deployments, not one absorbing the other. That raises a question the shodan/nmap connectors never had to answer, because those call third-party APIs chiron has no copy of: **when both projects can reach the same capability, how do you avoid two independent, drifting copies of it?**

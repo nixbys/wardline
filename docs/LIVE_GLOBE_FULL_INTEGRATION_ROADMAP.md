@@ -2,6 +2,8 @@
 
 *Written 2026-09-13, after cloning the actual upstream source (not just its README) to check what "integrate everything it has to offer" really means to build. Every claim below points at real code in [bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view) (commit `61db945`), not the project's own marketing summary.*
 
+*See [`MASTER_ROADMAP.md`](MASTER_ROADMAP.md) for how this track relates to the other two roadmap documents in this repo and what's actually being worked on next across all three.*
+
 ## Why this document exists
 
 The initially-approved plan (see the PR that added `api/routers/globe.py`, `connectors/usgs_earthquakes.py`, `connectors/nasa_firms.py`) treated God's Eye View as a small vanilla-JS learning tool and scoped a from-scratch, wardline-themed Cesium app against a handful of live-proxy endpoints. Cloning the real repository changed that assessment:

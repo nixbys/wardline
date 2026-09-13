@@ -2,6 +2,8 @@
 
 *Written 2026-08-22. Grounded in the actual state of this repository, not a generic SaaS checklist — every "already have" claim below points at real code, and every "gap" claim was checked against it first.*
 
+*See [`MASTER_ROADMAP.md`](MASTER_ROADMAP.md) for how this track relates to the other two roadmap documents in this repo and what's actually being worked on next across all three.*
+
 ## Read this part first: the "quantum encryption" question
 
 You asked for quantum encryption specifically, the way Proton's Lumo does it. I want to correct the premise before planning around it, because building toward the wrong target wastes the money this plan is trying to make.

@@ -11,6 +11,8 @@ This is the buildable translation of a fictional "omniscient" information engine
 
 *Renamed from "cranus" during a wider rebrand. One intentional fossil: the already-applied `migrations/versions/0001_initial_schema.py` still creates a Postgres function named `cranus_to_tsvector` — migration files describe exactly what was run against a real database, so that one isn't edited retroactively. It's an internal implementation detail (nothing public references the name), and any new migration is free to rename it later if that ever matters.*
 
+**Roadmap**: see [`docs/MASTER_ROADMAP.md`](docs/MASTER_ROADMAP.md) for where this project is headed across all three active tracks (commercialization, Live Globe, the chiron bridge) and what's actually being worked on next.
+
 ## Table of contents
 
 - [What this is not](#what-this-is-not)
