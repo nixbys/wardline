@@ -256,6 +256,114 @@
     inviteToOrg({ email, role }) {
       return request("/v1/orgs/invite", { method: "POST", body: { email, role } });
     },
+
+    // --- Ops Console (web/ops.html) -- admin/analyst only ---------------
+
+    /** GET /v1/admin/connectors/jobs?status=&connector_name=&limit= */
+    listJobs({ status, connectorName, limit = 50 } = {}) {
+      const qs = new URLSearchParams();
+      if (status) qs.set("status", status);
+      if (connectorName) qs.set("connector_name", connectorName);
+      qs.set("limit", limit);
+      return request(`/v1/admin/connectors/jobs?${qs}`);
+    },
+
+    /** GET /v1/admin/connectors/jobs/{id} */
+    getJobStatus({ jobId }) {
+      return request(`/v1/admin/connectors/jobs/${encodeURIComponent(jobId)}`);
+    },
+
+    /** GET /v1/admin/connectors/jobs/{id}/log?after_id= -- cursor-based polling */
+    getJobLog({ jobId, afterId = 0 }) {
+      return request(`/v1/admin/connectors/jobs/${encodeURIComponent(jobId)}/log?after_id=${afterId}`);
+    },
+
+    /** GET /v1/admin/entity-review/queue */
+    getEntityReviewQueue() {
+      return request("/v1/admin/entity-review/queue");
+    },
+
+    /** POST /v1/admin/entity-review/{id}/decision — body: { decision: "merged" | "rejected" } */
+    decideEntityReview({ reviewId, decision }) {
+      return request(`/v1/admin/entity-review/${encodeURIComponent(reviewId)}/decision`, {
+        method: "POST",
+        body: { decision },
+      });
+    },
+
+    /** GET /v1/admin/engagements */
+    listEngagements() {
+      return request("/v1/admin/engagements");
+    },
+
+    /** POST /v1/admin/engagements — admin-only */
+    createEngagement({ target, scopeNote, evidenceRef, validFrom, validUntil }) {
+      return request("/v1/admin/engagements", {
+        method: "POST",
+        body: {
+          target,
+          scope_note: scopeNote,
+          evidence_ref: evidenceRef,
+          valid_from: validFrom,
+          valid_until: validUntil,
+        },
+      });
+    },
+
+    /** POST /v1/admin/engagements/{id}/revoke — admin-only */
+    revokeEngagement({ engagementId }) {
+      return request(`/v1/admin/engagements/${encodeURIComponent(engagementId)}/revoke`, { method: "POST" });
+    },
+
+    /** GET /v1/admin/users — admin-only */
+    listUsers() {
+      return request("/v1/admin/users");
+    },
+
+    /** POST /v1/admin/users — admin-only; mints a usable API key immediately */
+    createUser({ email, role }) {
+      return request("/v1/admin/users", { method: "POST", body: { email, role } });
+    },
+
+    /** POST /v1/admin/users/invite — admin-only; emails an accept-invite link */
+    inviteAdminUser({ email, role }) {
+      return request("/v1/admin/users/invite", { method: "POST", body: { email, role } });
+    },
+
+    /** POST /v1/admin/users/{id}/revoke — admin-only */
+    revokeAdminUser({ userId }) {
+      return request(`/v1/admin/users/${encodeURIComponent(userId)}/revoke`, { method: "POST" });
+    },
+
+    /** GET /v1/admin/kill-switch */
+    getKillSwitch() {
+      return request("/v1/admin/kill-switch");
+    },
+
+    /** POST /v1/admin/kill-switch — admin-only; body: { enabled } */
+    setKillSwitch({ enabled }) {
+      return request("/v1/admin/kill-switch", { method: "POST", body: { enabled } });
+    },
+
+    /** POST /v1/admin/iceberg/export-audit-events — admin-only, on-demand export */
+    triggerIcebergExport() {
+      return request("/v1/admin/iceberg/export-audit-events", { method: "POST" });
+    },
+
+    /** GET /v1/admin/iceberg/export-receipts — admin-only */
+    listExportReceipts() {
+      return request("/v1/admin/iceberg/export-receipts");
+    },
+
+    /** GET /v1/admin/graph/entities/search?name= */
+    searchGraphEntity({ name }) {
+      return request(`/v1/admin/graph/entities/search?name=${encodeURIComponent(name)}`);
+    },
+
+    /** GET /v1/admin/graph/entities/{id}/traverse?hops= */
+    traverseEntity({ entityId, hops = 1 }) {
+      return request(`/v1/admin/graph/entities/${encodeURIComponent(entityId)}/traverse?hops=${hops}`);
+    },
   };
 
   window.WardlineApi = WardlineApi;
