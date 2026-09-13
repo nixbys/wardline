@@ -80,9 +80,10 @@ Each phase is independently shippable and reviewable — land as its own PR, sam
 
 ## Status
 
-- **Fork created: [nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view)** (public, `isFork: true`, parent `bilawalsidhu/gods-eye-view`, default branch `main`). Nothing has been pushed to it yet — Phase 1 (the theming spike) is the first work that actually lands commits there. Add an `upstream` remote pointing at `bilawalsidhu/gods-eye-view` before starting Phase 1, so `git fetch upstream` stays available for pulling improvements.
-- **Phase 0** (this repo's `globe/`, wardline-themed, against the endpoints in `api/routers/globe.py`) is being built in parallel on `feat/live-globe-integration` — see that branch for current status.
+- **Fork created: [nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view)** (public, `isFork: true`, parent `bilawalsidhu/gods-eye-view`, default branch `main`). An `upstream` remote pointing at `bilawalsidhu/gods-eye-view` is configured so `git fetch upstream` stays available for pulling improvements.
+- **Phase 1 (theming spike): [PR #1](https://github.com/nixbys/gods-eye-view/pull/1) open**, not yet merged — `src/ui/styles/wardline-theme.css` remaps `foundation.css`'s `:root` custom properties to wardline's palette, loaded right after it in `style.css` so it wins the cascade (verified by byte offset in the built CSS, plus a clean `npm run build`/`format:check`). Needs a visual look before merging — the verification done so far is structural (build succeeds, the right values land in the right cascade position), not "does it actually look right," which needs a human looking at a running instance.
+- **Phase 0** (this repo's `globe/`, wardline-themed, against the endpoints in `api/routers/globe.py`) shipped on `feat/live-globe-integration`.
 
 ## Decision still open
 
-**Pace**: land Phase 1 (the fork-side theming spike) next, or hold it and keep iterating on Phase 0's lean build for a while first? Both are legitimate; this doc doesn't assume an answer — ask before starting Phase 1's implementation work.
+**Merge PR #1?** Give the running app (`npm run dev` in the fork, `feat/wardline-theme` branch) a look before merging — structural verification doesn't substitute for actually seeing it. Once merged, Phase 2 (wiring one real layer through a sidecar) is next.

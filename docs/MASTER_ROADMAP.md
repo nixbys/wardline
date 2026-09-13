@@ -27,15 +27,15 @@ Every "next phase" across all three docs was deliberately written with its own g
 | Phase | Track | Gate type | This session |
 |---|---|---|---|
 | Ops Console | Commercialization | None — pure engineering, no external decision, wardline-only | **Ready. Needs a scoping pass first** (the one-sentence mention in the commercialization doc isn't a real spec) — see below. |
-| Live Globe Phase 1 (fork theming spike) | Live Globe | Was "ask before starting" — a pacing preference, not a real blocker; small, reversible, already fully specced | **Ready — starting this now** as part of executing "the phases," per this session's instruction. |
+| Live Globe Phase 1 (fork theming spike) | Live Globe | Was "ask before starting" — a pacing preference, not a real blocker; small, reversible, already fully specced | **Done, pending review**: [PR #1](https://github.com/nixbys/gods-eye-view/pull/1) open against the fork, not yet merged — wants a visual look (this session only verified it structurally) before merging. |
 | Live Globe Phase 2+ (sidecar, per-source rollout) | Live Globe | Depends on Phase 1 landing first | Not started. |
 | Chiron bridge Phase 2 (HTTP adapter on chiron's side) | Chiron bridge | **Real blocker**: (1) touches a different repository not available to this session to work in directly, (2) chiron is a pentesting toolkit — a new tool-execution HTTP surface is a security-relevant design change that genuinely warrants your review before code exists, not just before it ships | **Not starting.** Needs chiron made available as a working repo, plus a decision on deployment topology (same-host vs. internet-reachable — changes the design). |
 | Commercialization Phase 3-4 items (legal entity, live Stripe, pen test, SOC 2) | Commercialization | Real-world actions outside a repo's reach | Not started — nothing to code here. |
 | Path A vs. Path B (multi-tenancy) | Commercialization | Business decision | Still open, unchanged from that doc. |
 
-## What's happening in this session, concretely
+## What happened in this session
 
-1. **Live Globe Phase 1**: fork the theming spike into `nixbys/gods-eye-view` — a `wardline-theme.css` override on top of `foundation.css`'s existing custom-property scheme, verified by a real `npm run build`/`dev`, committed and pushed to the fork. Small, additive, reversible.
+1. **Live Globe Phase 1**: shipped as [PR #1](https://github.com/nixbys/gods-eye-view/pull/1) against the fork — `wardline-theme.css`, verified by a real `npm run build`/`format:check` and a cascade-order check on the built CSS. Not yet merged — wants an actual visual look first (see that roadmap doc's "Decision still open").
 2. **Ops Console**: needs a real scoping pass before code — "graph/jobs/audit/terminal admin tooling" names four different surfaces without saying what any of them actually show or how they're gated. This gets its own plan before implementation starts, not a guess dressed up as a spec.
 
 ## Decisions still open (consolidated from all three docs)
