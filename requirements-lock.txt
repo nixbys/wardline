@@ -134,7 +134,7 @@ respx==0.23.1
 rich==15.0.0
 rsa==4.9.1
 ruff==0.15.21
-s3transfer==0.19.0
+s3transfer==0.19.2
 safetensors==0.8.0
 scikit-learn==1.9.0
 scipy==1.18.0
