@@ -269,6 +269,30 @@ services:
     mem_limit: 256m
     cpus: 0.5
 
+  # Optional correlated-OSINT sidecar for wardline.connectors.spiderfoot --
+  # the official, unmodified smicallef/spiderfoot image (MIT-licensed; see
+  # connectors/spiderfoot.py's module docstring). Not started by default --
+  # `docker compose --profile spiderfoot up -d spiderfoot`, then set
+  # SPIDERFOOT_URL=http://spiderfoot:5001 in .env.
+  #
+  # If another deployment you're already running side-by-side with this one
+  # (e.g. chiron) has its own SpiderFoot instance, point SPIDERFOOT_URL at
+  # that one instead of starting this service at all -- one shared instance,
+  # not two independently-quota-limited copies hitting the same third-party
+  # APIs. See docs/CHIRON_WARDLINE_BRIDGE_ROADMAP.md.
+  #
+  # No host port published: reachable only from the worker container that
+  # actually runs ingestion jobs, same reasoning as toolrunner above.
+  spiderfoot:
+    image: smicallef/spiderfoot:latest
+    profiles: ["spiderfoot"]
+    restart: unless-stopped
+    command: ["sf.py", "-l", "0.0.0.0:5001"]
+    volumes:
+      - spiderfoot_data:/var/lib/spiderfoot
+    mem_limit: 1g
+    cpus: 1.0
+
 volumes:
   pgdata:
   neo4j_data:
@@ -276,3 +300,4 @@ volumes:
   minio_data:
   caddy_data:
   caddy_config:
+  spiderfoot_data:

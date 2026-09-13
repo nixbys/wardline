@@ -32,4 +32,13 @@ def resolve_connector_config(name: str) -> dict:
         return {"user_agent": settings.crawler_user_agent}
     if name == "nasa_firms":
         return {"map_key": settings.nasa_firms_map_key}
+    if name == "spiderfoot":
+        return {
+            "base_url": settings.spiderfoot_url,
+            "username": settings.spiderfoot_username,
+            "password": settings.spiderfoot_password,
+            "use_case": settings.spiderfoot_use_case,
+            "max_wait_seconds": settings.spiderfoot_max_wait_seconds,
+            "poll_interval_seconds": settings.spiderfoot_poll_interval_seconds,
+        }
     return {}

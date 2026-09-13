@@ -38,6 +38,7 @@ def _load_builtin_connectors() -> None:
         nmap_scan,
         opencorporates,
         sec_edgar,
+        spiderfoot,
         threat_intel,
         upload,
         usgs_earthquakes,

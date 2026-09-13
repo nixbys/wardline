@@ -163,9 +163,10 @@ class Settings(BaseSettings):
     nasa_firms_map_key: str | None = None
 
     # --- Dual-use / engagement-scoped connectors (connectors/threat_intel.py,
-    # connectors/nmap_scan.py) -- every run of these still has to clear
-    # governance.pep.enforce_engagement_scope first; these are just the
-    # credentials/endpoint the connector needs once that gate has passed.
+    # connectors/nmap_scan.py, connectors/spiderfoot.py) -- every run of
+    # these still has to clear governance.pep.enforce_engagement_scope
+    # first; these are just the credentials/endpoint the connector needs
+    # once that gate has passed.
     shodan_api_key: str | None = None
     # Base URL of the docker/toolrunner/ sidecar that actually executes
     # active-scan tools (e.g. "http://toolrunner:8090" when running the
@@ -173,6 +174,19 @@ class Settings(BaseSettings):
     # rather than silently no-op-ing.
     toolrunner_url: str | None = None
     toolrunner_token: str | None = None
+    # Base URL of a SpiderFoot instance (e.g. "http://spiderfoot:5001" for
+    # the optional `spiderfoot` compose profile) -- a plain external
+    # dependency, not something this connector assumes it owns. If another
+    # cooperating deployment (e.g. chiron) already runs one, point this at
+    # that instance instead of starting a second one; see
+    # docs/CHIRON_WARDLINE_BRIDGE_ROADMAP.md. Left unset, spiderfoot raises
+    # rather than silently no-op-ing, same as toolrunner_url above.
+    spiderfoot_url: str | None = None
+    spiderfoot_username: str | None = None
+    spiderfoot_password: str | None = None
+    spiderfoot_use_case: str = "footprint"  # "passive" | "investigate" | "footprint" | "all"
+    spiderfoot_max_wait_seconds: int = 1800
+    spiderfoot_poll_interval_seconds: int = 15
 
     # --- Live Globe (public geospatial visualization: api/routers/globe.py) ---
     # Every layer here is optional -- GET /v1/globe/config reports which are
