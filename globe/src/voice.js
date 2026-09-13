@@ -8,8 +8,8 @@
  * Scope note: upstream ships 28 voice-controlled tools across cinematic
  * camera work, layer toggles, and cockpit mode. This ships two —
  * fly_to and toggle_layer — as a real, working slice rather than stubs
- * for the rest; see docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md's Phase 4
- * for where the remaining tool surface actually belongs.
+ * for the rest; see internal planning notes for where the remaining tool
+ * surface actually belongs.
  */
 import { GlobeApi } from "./api.js";
 

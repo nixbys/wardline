@@ -279,7 +279,7 @@ services:
   # (e.g. chiron) has its own SpiderFoot instance, point SPIDERFOOT_URL at
   # that one instead of starting this service at all -- one shared instance,
   # not two independently-quota-limited copies hitting the same third-party
-  # APIs. See docs/CHIRON_WARDLINE_BRIDGE_ROADMAP.md.
+  # APIs. Per internal planning notes on avoiding duplicate infrastructure.
   #
   # No host port published: reachable only from the worker container that
   # actually runs ingestion jobs, same reasoning as toolrunner above.

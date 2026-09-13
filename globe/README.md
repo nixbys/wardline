@@ -12,10 +12,9 @@ repo root. It's intentionally a much smaller slice of what that project
 does: aircraft, satellites, vessels, traffic (click-to-query), and a
 two-tool voice control (fly-to, layer toggle), not its cinematic camera
 system, cockpit mode, CCTV, or the other ~15 data sources it also
-integrates. **[`docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md`](../docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md)**
-at the repo root is the detailed plan for bringing in the rest, via a real
-fork ([nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view)) —
-this app is that plan's "Phase 0."
+integrates. Internal planning notes hold the detailed plan for bringing in
+the rest, via a real fork ([nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view))
+— this app is that plan's "Phase 0."
 
 ## Running it
 

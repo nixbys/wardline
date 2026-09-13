@@ -13,10 +13,9 @@ MIT-licensed application (github.com/smicallef/spiderfoot) called over a
 network boundary, same posture this project already takes with Shodan's
 API. `SPIDERFOOT_URL` is a plain external dependency: it can point at a
 sidecar this deployment starts itself, or at an *already-running* instance
-another cooperating deployment owns (see
-docs/CHIRON_WARDLINE_BRIDGE_ROADMAP.md's "avoid duplicate infrastructure"
-principle) — this connector doesn't know or care which, and doesn't stand
-one up implicitly.
+another cooperating deployment owns (per internal planning notes' "avoid
+duplicate infrastructure" principle) — this connector doesn't know or
+care which, and doesn't stand one up implicitly.
 
 SpiderFoot's own web API has no bulk/streaming result endpoint — it's a
 start → poll → retrieve lifecycle (scans run minutes to tens of minutes):

@@ -59,8 +59,8 @@ releases, so entries are grouped by work session instead of version number.
   vendored from — kept at arm's length specifically to avoid AGPL scope creep) chiron's
   tool categories. `governance.engagements.target_in_scope` now understands CIDR ranges, not just
   domain suffixes, since infra engagements are routinely scoped to a network block.
-- `docs/COMMERCIALIZATION_ROADMAP.md`: production/accounts/encryption/go-to-market plan, written
-  against this repo's actual state rather than a generic SaaS checklist.
+- Internal planning notes (not tracked in this repo): a production/accounts/encryption/
+  go-to-market plan, written against this repo's actual state rather than a generic SaaS checklist.
 - Production hardening: non-root container users, `.dockerignore`, security response headers,
   an explicit unhandled-exception handler that logs full detail server-side but never leaks it to
   clients, a bounded-read upload size limit (`UPLOAD_MAX_BYTES`, default 50 MiB), and

@@ -14,8 +14,7 @@ renders in-app instead — see `globe/README.md`'s Attribution section and
 [bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view),
 credited in-app via the Live Globe HUD's attribution line. A full-fidelity
 integration — consuming that project's actual code via a maintained fork
-rather than reimplementing it — is planned; see
-[`docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md`](docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md).
+rather than reimplementing it — is planned per internal notes.
 The fork itself, once it carries real commits, will retain the upstream
 project's own MIT `LICENSE` file in full, per that license's terms:
 
