@@ -189,6 +189,15 @@
       return request("/v1/billing/portal", { method: "POST" });
     },
 
+    /** POST /v1/billing/donate — public, no account needed; body: { amount_usd, message? };
+     *  returns { checkout_url } */
+    donate({ amountUsd, message }) {
+      return request("/v1/billing/donate", {
+        method: "POST",
+        body: { amount_usd: amountUsd, message: message || null },
+      });
+    },
+
     /** POST /v1/query — body: { question, mode, filters, max_sources } */
     query({ question, mode = "auto", filters = {}, max_sources = 12 }) {
       return request("/v1/query", {

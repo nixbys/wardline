@@ -273,6 +273,10 @@ class Settings(BaseSettings):
     # these at the real web/ deployment's origin, not the API's own.
     billing_success_url: str = "http://localhost:5173/app.html?billing=success"
     billing_cancel_url: str = "http://localhost:5173/pricing.html?billing=canceled"
+    # POST /v1/billing/donate is public/unauthenticated (donating never
+    # requires an account) -- same "public + cost-triggering needs a cap"
+    # reasoning as rate_limit_auth_per_minute, whose default this mirrors.
+    rate_limit_donate_per_minute: int = 10
 
     # --- Auth mode: bearer API keys (default) or OIDC JWT bearer tokens ---
     # "api_key" is this project's own key system (governance/*, storage/models/governance.py).

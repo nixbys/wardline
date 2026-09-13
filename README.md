@@ -291,6 +291,13 @@ curl -X POST http://localhost:8000/v1/billing/checkout \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"plan_id": "pro"}'
 ```
 
+**Donations** (`POST /v1/billing/donate`, public, no account/bearer token needed) are a separate, deliberately unrelated flow: a one-time Stripe Checkout payment (`mode="payment"`, dynamic `price_data`, no pre-created Price object) that records a `Donation` row and grants no plan/entitlement — Wardline stays free to use regardless of whether someone donates. `web/donate.html` is the UI; it uses the same `BILLING_MODE=mock|stripe` convention as everything else in this section.
+
+```bash
+curl -X POST http://localhost:8000/v1/billing/donate \
+  -H "Content-Type: application/json" -d '{"amount_usd": 10, "message": "keep it free"}'
+```
+
 Not yet built: per-plan rate limiting (today's `slowapi` limits are still flat, not plan-scoped — see `docs/COMMERCIALIZATION_ROADMAP.md`), and org-level (rather than per-user) subscriptions for the Team plan's actual seat management.
 
 ## Governance
