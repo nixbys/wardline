@@ -26,7 +26,7 @@ Every "next phase" across all three docs was deliberately written with its own g
 
 | Phase | Track | Gate type | This session |
 |---|---|---|---|
-| Ops Console | Commercialization | None — pure engineering, no external decision, wardline-only | **Ready. Needs a scoping pass first** (the one-sentence mention in the commercialization doc isn't a real spec) — see below. |
+| Ops Console | Commercialization | None — pure engineering, no external decision, wardline-only | **Done.** Scoped via plan mode (resolved "terminal" → a read-only live log tail, not command execution), then built: `web/ops.html`, two new admin endpoints (job listing, job log tail) plus a new graph-browsing router, a new `JobLogLine` table. 214 unit tests pass, `ruff` clean. |
 | Live Globe Phase 1 (fork theming spike) | Live Globe | Was "ask before starting" — a pacing preference, not a real blocker; small, reversible, already fully specced | **Done, pending review**: [PR #1](https://github.com/nixbys/gods-eye-view/pull/1) open against the fork, not yet merged — wants a visual look (this session only verified it structurally) before merging. |
 | Live Globe Phase 2+ (sidecar, per-source rollout) | Live Globe | Depends on Phase 1 landing first | Not started. |
 | Chiron bridge Phase 2 (HTTP adapter on chiron's side) | Chiron bridge | **Real blocker**: (1) touches a different repository not available to this session to work in directly, (2) chiron is a pentesting toolkit — a new tool-execution HTTP surface is a security-relevant design change that genuinely warrants your review before code exists, not just before it ships | **Not starting.** Needs chiron made available as a working repo, plus a decision on deployment topology (same-host vs. internet-reachable — changes the design). |
@@ -36,7 +36,7 @@ Every "next phase" across all three docs was deliberately written with its own g
 ## What happened in this session
 
 1. **Live Globe Phase 1**: shipped as [PR #1](https://github.com/nixbys/gods-eye-view/pull/1) against the fork — `wardline-theme.css`, verified by a real `npm run build`/`format:check` and a cascade-order check on the built CSS. Not yet merged — wants an actual visual look first (see that roadmap doc's "Decision still open").
-2. **Ops Console**: needs a real scoping pass before code — "graph/jobs/audit/terminal admin tooling" names four different surfaces without saying what any of them actually show or how they're gated. This gets its own plan before implementation starts, not a guess dressed up as a spec.
+2. **Ops Console**: shipped end to end — backend (job listing + live log tail + graph-browsing endpoints, a new `JobLogLine` table) and frontend (`web/ops.html`'s eight panels). See the two commits on `feat/live-globe-integration` for the full detail; nothing here is still open except the manual "click through a real running stack" verification step neither this session's sandbox nor a code review can substitute for.
 
 ## Decisions still open (consolidated from all three docs)
 
