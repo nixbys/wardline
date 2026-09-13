@@ -40,9 +40,9 @@ from wardline.governance.rate_limit import limiter
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/globe", tags=["globe"])
 
-OPENSKY_TOKEN_URL = (
-    "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"
-)
+# An OAuth2 endpoint URL, not a credential -- bandit's hardcoded-password
+# heuristic (B105) matches on the literal substring "token" in the path.
+OPENSKY_TOKEN_URL = "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token"  # nosec B105
 OPENSKY_STATES_URL = "https://opensky-network.org/api/states/all"
 CELESTRAK_URL = "https://celestrak.org/NORAD/elements/gp.php"
 TOMTOM_FLOW_URL = "https://api.tomtom.com/traffic/services/4/flowSegmentData/absolute/10/json"
