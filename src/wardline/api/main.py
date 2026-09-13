@@ -19,6 +19,7 @@ from wardline.api.routers import (
     billing,
     entity_review,
     feedback,
+    globe,
     health,
     orgs,
     query,
@@ -107,6 +108,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_engagements.router)
     app.include_router(admin_iceberg.router)
     app.include_router(upload.router)
+    app.include_router(globe.router)
     return app
 
 

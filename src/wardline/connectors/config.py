@@ -28,6 +28,8 @@ def resolve_connector_config(name: str) -> dict:
             "user_agent": settings.crawler_user_agent,
             "api_token": settings.opencorporates_api_token,
         }
-    if name in ("wikipedia", "archive_org", "wikidata"):
+    if name in ("wikipedia", "archive_org", "wikidata", "usgs_earthquakes"):
         return {"user_agent": settings.crawler_user_agent}
+    if name == "nasa_firms":
+        return {"map_key": settings.nasa_firms_map_key}
     return {}

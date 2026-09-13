@@ -158,6 +158,9 @@ class Settings(BaseSettings):
     crawler_per_domain_delay_seconds: float = 1.0
     sec_edgar_user_agent: str = "wardline-research-bot contact@example.com"
     opencorporates_api_token: str | None = None
+    # connectors/nasa_firms.py -- free at https://firms.modaps.eosdis.nasa.gov/api/map_key/.
+    # Leave unset to skip that connector (usgs_earthquakes needs no key at all).
+    nasa_firms_map_key: str | None = None
 
     # --- Dual-use / engagement-scoped connectors (connectors/threat_intel.py,
     # connectors/nmap_scan.py) -- every run of these still has to clear
@@ -170,6 +173,29 @@ class Settings(BaseSettings):
     # rather than silently no-op-ing.
     toolrunner_url: str | None = None
     toolrunner_token: str | None = None
+
+    # --- Live Globe (public geospatial visualization: api/routers/globe.py) ---
+    # Every layer here is optional -- GET /v1/globe/config reports which are
+    # actually usable so the frontend can hide the rest, matching the
+    # upstream project's own "most layers need no key" behavior. Kept out of
+    # the connectors/ + ingestion pipeline on purpose: these are
+    # continuously-updating positions, not citable documents (see
+    # connectors/usgs_earthquakes.py's docstring for the discrete-event
+    # counterpart that *does* go through ingestion).
+    opensky_client_id: str | None = None
+    opensky_client_secret: str | None = None
+    aisstream_api_key: str | None = None
+    tomtom_api_key: str | None = None
+    # Mints short-lived ephemeral Realtime session tokens server-side
+    # (POST /v1/globe/realtime-session) for the globe's voice-control
+    # feature -- the browser never sees this key directly.
+    openai_api_key: str | None = None
+    rate_limit_globe_per_minute: int = 30
+    # How long a proxied feed response is cached before re-fetching
+    # upstream, to keep an unauthenticated, IP-limited endpoint from turning
+    # into an unbounded amplifier against a rate/cost-limited third-party
+    # API (TomTom, AISStream) when many browsers poll it.
+    globe_proxy_cache_seconds: float = 10.0
 
     # --- Governance / security ---
     api_key_pepper: str = Field(
