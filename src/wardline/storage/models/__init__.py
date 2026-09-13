@@ -3,7 +3,7 @@ autogenerate and for `Base.metadata.create_all()` in tests.
 """
 
 from wardline.storage.models.base import Base
-from wardline.storage.models.billing import Subscription
+from wardline.storage.models.billing import Donation, Subscription
 from wardline.storage.models.chunks import Chunk
 from wardline.storage.models.documents import Document
 from wardline.storage.models.edges import Edge
@@ -25,7 +25,7 @@ from wardline.storage.models.governance import (
     VaultKey,
 )
 from wardline.storage.models.iceberg import IcebergExportReceipt
-from wardline.storage.models.ingestion import IngestionJob, Source
+from wardline.storage.models.ingestion import IngestionJob, JobLogLine, Source
 from wardline.storage.models.orgs import Organization
 
 __all__ = [
@@ -35,6 +35,7 @@ __all__ = [
     "Base",
     "Chunk",
     "Document",
+    "Donation",
     "Edge",
     "EdgeCandidate",
     "Engagement",
@@ -44,6 +45,7 @@ __all__ = [
     "Feedback",
     "IcebergExportReceipt",
     "IngestionJob",
+    "JobLogLine",
     "Organization",
     "RecoveryCode",
     "Source",

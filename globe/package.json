@@ -1,0 +1,21 @@
+{
+  "name": "wardline-globe",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Wardline Live Globe -- a 3D CesiumJS visualization of live public geospatial feeds, proxied through the wardline API. An original build inspired by (not a vendored copy of) github.com/bilawalsidhu/gods-eye-view (MIT) -- see README.md and docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md at the repo root for the fuller integration this is Phase 0 of.",
+  "type": "module",
+  "license": "Apache-2.0",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "cesium": "^1.124.0",
+    "satellite.js": "^6.0.2"
+  },
+  "devDependencies": {
+    "vite": "^6.0.0",
+    "vite-plugin-cesium": "^1.2.23"
+  }
+}

@@ -5,8 +5,9 @@ Admin/analyst only.
 
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel
+from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from wardline.api.deps import get_db, require_role
@@ -16,7 +17,7 @@ from wardline.connectors.registry import get_connector, list_connectors
 from wardline.governance import pep
 from wardline.storage.catalog import register_source
 from wardline.storage.models.governance import ROLE_ADMIN, ROLE_ANALYST, User
-from wardline.storage.models.ingestion import IngestionJob
+from wardline.storage.models.ingestion import IngestionJob, JobLogLine
 
 router = APIRouter(prefix="/v1/admin/connectors", tags=["admin-connectors"])
 _operator_role = require_role(ROLE_ADMIN, ROLE_ANALYST)
@@ -72,6 +73,38 @@ def run_connector(
     return {"job_id": job.id, "status": job.status}
 
 
+def _serialize_job(job: IngestionJob) -> dict:
+    return {
+        "id": job.id,
+        "connector_name": job.connector_name,
+        "status": job.status,
+        "result": job.result,
+        "error": job.error,
+        "created_at": job.created_at.isoformat(),
+        "started_at": job.started_at.isoformat() if job.started_at else None,
+        "finished_at": job.finished_at.isoformat() if job.finished_at else None,
+    }
+
+
+@router.get("/jobs")
+def list_jobs(
+    status: str | None = Query(default=None),
+    connector_name: str | None = Query(default=None),
+    limit: int = Query(default=50, le=200),
+    db: Session = Depends(get_db),
+    _user: User = Depends(_operator_role),
+) -> list[dict]:
+    """The Ops Console's Jobs panel -- previously only a single-job lookup
+    existed (`get_job_status` below); nothing let an operator see what's
+    running/queued/recently finished across every connector at once."""
+    stmt = select(IngestionJob).order_by(IngestionJob.created_at.desc()).limit(limit)
+    if status:
+        stmt = stmt.where(IngestionJob.status == status)
+    if connector_name:
+        stmt = stmt.where(IngestionJob.connector_name == connector_name)
+    return [_serialize_job(job) for job in db.execute(stmt).scalars()]
+
+
 @router.get("/jobs/{job_id}")
 def get_job_status(
     job_id: str, db: Session = Depends(get_db), _user: User = Depends(_operator_role)
@@ -79,10 +112,26 @@ def get_job_status(
     job = db.get(IngestionJob, job_id)
     if job is None:
         return {"error": "not found"}
-    return {
-        "id": job.id,
-        "connector_name": job.connector_name,
-        "status": job.status,
-        "result": job.result,
-        "error": job.error,
-    }
+    return _serialize_job(job)
+
+
+@router.get("/jobs/{job_id}/log")
+def get_job_log(
+    job_id: str,
+    after_id: int = Query(default=0),
+    db: Session = Depends(get_db),
+    _user: User = Depends(_operator_role),
+) -> list[dict]:
+    """The Ops Console's live "terminal" tail -- cursor-based polling
+    (`after_id`, not a timestamp) so a line written in the same instant as
+    the last poll is never missed or duplicated. See
+    worker/job_log.py:log_job_event for what writes these."""
+    stmt = (
+        select(JobLogLine)
+        .where(JobLogLine.job_id == job_id, JobLogLine.id > after_id)
+        .order_by(JobLogLine.id)
+    )
+    return [
+        {"id": line.id, "level": line.level, "message": line.message, "created_at": line.created_at.isoformat()}
+        for line in db.execute(stmt).scalars()
+    ]
