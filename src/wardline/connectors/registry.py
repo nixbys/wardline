@@ -34,11 +34,14 @@ def _load_builtin_connectors() -> None:
     # Import side effects register each module's @register_connector class.
     from wardline.connectors import (  # noqa: F401
         archive_org,
+        nasa_firms,
         nmap_scan,
         opencorporates,
         sec_edgar,
+        spiderfoot,
         threat_intel,
         upload,
+        usgs_earthquakes,
         web_crawler,
         wikidata,
         wikipedia,

@@ -1,0 +1,110 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Support Wardline</title>
+    <meta
+      name="description"
+      content="Wardline is free to use. If it's useful to you, a one-time donation helps keep it that way."
+    />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="assets/css/tokens.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+    <link rel="stylesheet" href="assets/css/landing.css" />
+    <link rel="stylesheet" href="assets/css/pricing.css" />
+  </head>
+  <body>
+    <header class="nav">
+      <a class="nav__brand" href="index.html" style="text-decoration:none; color:inherit;">
+        <span class="nav__mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+          </svg>
+        </span>
+        Wardline
+      </a>
+      <nav class="nav__links" aria-label="Primary">
+        <a href="index.html#planes">Architecture</a>
+        <a href="pricing.html">Pricing</a>
+        <a href="app.html">Console</a>
+        <a href="/globe/">Live Globe</a>
+      </nav>
+      <div class="nav__actions">
+        <button class="btn btn--icon btn--ghost tooltip" data-theme-toggle data-tooltip="Switch to dark" aria-pressed="false" aria-label="Toggle color theme">
+          <svg width="17" height="17" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+            <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" />
+            <path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+          </svg>
+        </button>
+        <a class="btn btn--secondary btn--sm" href="login.html">Sign in</a>
+      </div>
+    </header>
+
+    <main class="section">
+      <div class="section__head">
+        <h2>Support Wardline</h2>
+        <p>
+          Wardline is free to use and open source, and stays that way for now. If it's useful to
+          you, a one-time contribution helps cover the cost of running it — no account, no
+          subscription, no strings attached.
+        </p>
+      </div>
+
+      <div class="card card--pad" style="max-width:420px; margin:0 auto;">
+        <div class="field">
+          <label class="field__label">Amount</label>
+          <div class="plan-grid" id="amountGrid" style="grid-template-columns:repeat(4, 1fr); gap:0.5rem;">
+            <button class="btn btn--secondary" type="button" data-amount="5">$5</button>
+            <button class="btn btn--secondary" type="button" data-amount="10">$10</button>
+            <button class="btn btn--secondary" type="button" data-amount="25">$25</button>
+            <button class="btn btn--secondary" type="button" data-amount="50">$50</button>
+          </div>
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="customAmount">Or enter your own</label>
+          <input class="input" id="customAmount" type="number" min="1" max="100000" step="1" placeholder="$" />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="donateMessage">Message (optional)</label>
+          <input class="input" id="donateMessage" type="text" maxlength="500" placeholder="Say hi (optional)" />
+        </div>
+
+        <button class="btn btn--primary btn--block" id="donateSubmit" type="button">Donate</button>
+
+        <div class="banner" id="donateStatus" hidden style="margin-top:1rem;"></div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div class="footer__grid">
+        <div class="nav__brand"><span class="nav__mark" aria-hidden="true" style="width:24px;height:24px">
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+          </svg>
+        </span>Wardline</div>
+        <div class="footer__cols">
+          <div class="footer__col">
+            <strong>Product</strong>
+            <a href="app.html">Research console</a>
+            <a href="pricing.html">Pricing</a>
+          </div>
+          <div class="footer__col">
+            <strong>Enterprise</strong>
+            <a href="mailto:sales@wardline.example">Talk to sales</a>
+          </div>
+        </div>
+      </div>
+    </footer>
+
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script src="assets/js/theme.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/donate.js"></script>
+  </body>
+</html>

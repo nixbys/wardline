@@ -14,6 +14,7 @@ from wardline.common.logging import get_logger
 from wardline.storage.db import sync_session
 from wardline.storage.models.base import utcnow
 from wardline.storage.models.ingestion import IngestionJob
+from wardline.worker.job_log import log_job_event
 
 logger = get_logger(__name__)
 
@@ -74,14 +75,17 @@ def run_job(job: IngestionJob) -> None:
     from wardline.ingestion.pipeline import run_connector_job
 
     logger.info("job.start", job_id=job.id, connector=job.connector_name)
+    log_job_event(job.id, f"started ({job.connector_name})")
     try:
         connector = get_connector(job.connector_name, config=resolve_connector_config(job.connector_name))
-        result = run_connector_job(connector, job.params)
+        result = run_connector_job(connector, job.params, job_id=job.id)
         _finish(job.id, status="succeeded", result=result)
         logger.info("job.succeeded", job_id=job.id, result=result)
+        log_job_event(job.id, f"succeeded: {result}")
     except Exception as exc:  # worker must never crash on a bad job
         logger.error("job.failed", job_id=job.id, error=str(exc))
         _finish(job.id, status="failed", error=f"{exc}\n{traceback.format_exc()}")
+        log_job_event(job.id, f"failed: {exc}", level="error")
 
 
 def _finish(job_id: str, *, status: str, result: dict | None = None, error: str | None = None) -> None:

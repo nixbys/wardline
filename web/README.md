@@ -67,6 +67,9 @@ client-only:
 | "Inspect session" panel | `GET /v1/session/{id}` |
 | Upload a document | `POST /v1/documents/upload` (multipart) |
 | Connection status dot | `GET /healthz` |
+| Live Globe link (nav, sidebar) | Points at `/globe/` — a separate app (`globe/`), not part of this directory; see its own README |
+| Donate (`donate.html`) | `POST /v1/billing/donate` — public, no account needed; a one-time Stripe Checkout payment, unrelated to plan entitlements |
+| Ops Console (`ops.html`) | Jobs/live log, audit, entity review, engagements, users, kill switch, Iceberg exports, graph browser — admin/analyst only, gated on `GET /v1/auth/me`'s role, same server-side 403s as every endpoint it calls |
 | Chat history sidebar | **client-side only** — `localStorage`, keyed by the `session_id` each query returns. `GET /v1/session/{id}` doesn't echo the rendered answer back (only audit metadata: retrieved chunk ids, latency, token cost), so the transcript itself lives in the browser, not the server. |
 
 No telemetry, no third-party requests — the only network calls this page
@@ -83,21 +86,26 @@ web/
 ├── reset-password.html     request a reset, then (with ?token=) set a new password
 ├── accept-invite.html      lands here from an admin's invite link
 ├── pricing.html            plan cards, reads live from GET /v1/billing/plans
+├── donate.html             one-time donation, posts to POST /v1/billing/donate
+├── ops.html                admin/analyst console -- jobs/audit/graph/kill-switch/etc.
 └── assets/
     ├── css/
     │   ├── tokens.css       color/spacing/typography variables, light+dark
     │   ├── base.css         resets and global element styles
     │   ├── components.css   shared "Flux-style" component classes
     │   ├── landing.css      index.html-only layout
-    │   ├── app.css          app.html-only layout
+    │   ├── app.css          app.html-only layout (ops.html reuses its .app-shell/.sidebar/.topbar)
     │   ├── auth.css         shared centered-card layout for the four auth pages
-    │   └── pricing.css      pricing.html-only layout
+    │   ├── pricing.css      pricing.html/donate.html layout (shared -- both are a card of options + submit)
+    │   └── ops.css          ops.html-only layout (nav list, data tables, live-log terminal)
     └── js/
         ├── theme.js          light/dark toggle, shared by every page
         ├── api.js            fetch wrapper for the wardline API
         ├── app.js            research console interactivity
         ├── auth-pages.js     login/signup/verify/reset/invite logic
-        └── pricing.js        plan cards + checkout
+        ├── pricing.js        plan cards + checkout
+        ├── donate.js         amount picker + POST /v1/billing/donate
+        └── ops.js            ops.html's eight panels
 ```
 
 ## Extending it

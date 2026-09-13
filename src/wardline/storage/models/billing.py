@@ -20,7 +20,7 @@ from __future__ import annotations
 from datetime import datetime
 from functools import partial
 
-from sqlalchemy import DateTime, ForeignKey, String
+from sqlalchemy import DateTime, ForeignKey, Integer, String
 from sqlalchemy.orm import Mapped, mapped_column
 
 from wardline.common.plans import DEFAULT_PLAN
@@ -47,3 +47,22 @@ class Subscription(Base, TimestampMixin):
     org_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("organizations.id", ondelete="SET NULL"), nullable=True, unique=True
     )
+
+
+class Donation(Base, TimestampMixin):
+    """A one-time Stripe Checkout payment (`mode="payment"`, not
+    `"subscription"`) -- deliberately unrelated to `Subscription`/plan
+    entitlements. Wardline stays free to use; this just records that
+    someone chose to support the project, for a future thank-you/supporter
+    display. No `user_id` -- donating never requires an account (see
+    `POST /v1/billing/donate`), so this only ever has whatever the donor
+    typed into the optional `message` field.
+    """
+
+    __tablename__ = "donations"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=partial(new_id, "don"))
+    amount_cents: Mapped[int] = mapped_column(Integer, nullable=False)
+    currency: Mapped[str] = mapped_column(String(8), default="usd")
+    message: Mapped[str | None] = mapped_column(String(500), nullable=True)
+    stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(128), nullable=True)

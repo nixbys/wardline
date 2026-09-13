@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Live Globe — Wardline</title>
+    <meta
+      name="description"
+      content="A live 3D view of public flight, vessel, satellite, and traffic feeds, proxied through the wardline API."
+    />
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="./src/style.css" />
+  </head>
+  <body>
+    <header class="bar">
+      <a class="bar__brand" href="/" aria-label="Back to Wardline">
+        <span class="bar__mark" aria-hidden="true">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none">
+            <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            <path d="M12 12 3 7M12 12v10M12 12l9-5" stroke="currentColor" stroke-width="1.6" />
+          </svg>
+        </span>
+        Wardline <span class="bar__divider">/</span> Live Globe
+      </a>
+      <div class="bar__actions">
+        <button id="voiceToggle" class="pill pill--button" type="button" hidden>🎙 Voice</button>
+      </div>
+    </header>
+
+    <div id="cesiumContainer"></div>
+
+    <aside id="hud" class="hud" aria-label="Layers and status"></aside>
+
+    <div id="toastStack" class="toast-stack" aria-live="polite"></div>
+
+    <script type="module" src="./src/main.js"></script>
+  </body>
+</html>
