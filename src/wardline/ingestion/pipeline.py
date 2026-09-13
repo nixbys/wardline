@@ -166,12 +166,21 @@ def ingest_item_sync(connector: Connector, item: SourceItem) -> dict:
     return asyncio.run(ingest_item(connector, item))
 
 
-def run_connector_job(connector: Connector, params: dict) -> dict:
-    return asyncio.run(_run_connector_job_flow(connector, params))
+def run_connector_job(connector: Connector, params: dict, job_id: str | None = None) -> dict:
+    return asyncio.run(_run_connector_job_flow(connector, params, job_id=job_id))
+
+
+# Per-item lines in job_log_lines are capped here, not truncated at read
+# time: a web_crawler/nasa_firms run can discover thousands of items, and
+# that table is a live-progress tail for the Ops Console, not a second
+# audit log -- unbounded growth there would be its own quiet problem.
+_MAX_PER_ITEM_LOG_LINES = 200
 
 
 @flow
-async def _run_connector_job_flow(connector: Connector, params: dict) -> dict:
+async def _run_connector_job_flow(connector: Connector, params: dict, job_id: str | None = None) -> dict:
+    from wardline.worker.job_log import log_job_event
+
     stats = {"discovered": 0, "ingested": 0, "quarantined": 0, "duplicates": 0, "errors": 0}
 
     with sync_session() as db:
@@ -189,6 +198,13 @@ async def _run_connector_job_flow(connector: Connector, params: dict) -> dict:
             stats["quarantined"] += 1
         else:
             stats["errors"] += 1
+
+        if job_id and stats["discovered"] <= _MAX_PER_ITEM_LOG_LINES:
+            level = "error" if status == "error" else "info"
+            detail = f": {result['error']}" if status == "error" else ""
+            log_job_event(job_id, f"{status}: {item.ref}{detail}", level=level)
+        elif job_id and stats["discovered"] == _MAX_PER_ITEM_LOG_LINES + 1:
+            log_job_event(job_id, f"…more than {_MAX_PER_ITEM_LOG_LINES} items — no further per-item lines")
 
     with sync_session() as db:
         record_run(db, connector.name, rows_added=stats["ingested"])

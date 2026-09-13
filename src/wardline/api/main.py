@@ -12,6 +12,7 @@ from starlette.middleware.base import BaseHTTPMiddleware
 from wardline.api.routers import (
     admin_connectors,
     admin_engagements,
+    admin_graph,
     admin_iceberg,
     admin_users,
     audit,
@@ -19,6 +20,7 @@ from wardline.api.routers import (
     billing,
     entity_review,
     feedback,
+    globe,
     health,
     orgs,
     query,
@@ -105,8 +107,10 @@ def create_app() -> FastAPI:
     app.include_router(admin_users.router)
     app.include_router(admin_connectors.router)
     app.include_router(admin_engagements.router)
+    app.include_router(admin_graph.router)
     app.include_router(admin_iceberg.router)
     app.include_router(upload.router)
+    app.include_router(globe.router)
     return app
 
 

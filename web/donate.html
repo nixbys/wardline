@@ -3,7 +3,11 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Pricing — Wardline</title>
+    <title>Support Wardline</title>
+    <meta
+      name="description"
+      content="Wardline is free to use. If it's useful to you, a one-time donation helps keep it that way."
+    />
     <link rel="icon" href="data:," />
     <link rel="stylesheet" href="assets/css/tokens.css" />
     <link rel="stylesheet" href="assets/css/base.css" />
@@ -40,15 +44,39 @@
 
     <main class="section">
       <div class="section__head">
-        <h2>Simple, seat-based pricing</h2>
-        <p>Every plan gets citation-verified answers and the full audit trail. Higher tiers unlock deeper research and more sources per answer.</p>
+        <h2>Support Wardline</h2>
+        <p>
+          Wardline is free to use and open source, and stays that way for now. If it's useful to
+          you, a one-time contribution helps cover the cost of running it — no account, no
+          subscription, no strings attached.
+        </p>
       </div>
 
-      <div class="plan-grid" id="planGrid">
-        <p class="field__hint" style="text-align:center;">Loading plans…</p>
-      </div>
+      <div class="card card--pad" style="max-width:420px; margin:0 auto;">
+        <div class="field">
+          <label class="field__label">Amount</label>
+          <div class="plan-grid" id="amountGrid" style="grid-template-columns:repeat(4, 1fr); gap:0.5rem;">
+            <button class="btn btn--secondary" type="button" data-amount="5">$5</button>
+            <button class="btn btn--secondary" type="button" data-amount="10">$10</button>
+            <button class="btn btn--secondary" type="button" data-amount="25">$25</button>
+            <button class="btn btn--secondary" type="button" data-amount="50">$50</button>
+          </div>
+        </div>
 
-      <div class="banner" id="pricingStatus" hidden style="max-width:480px; margin:2rem auto 0;"></div>
+        <div class="field">
+          <label class="field__label" for="customAmount">Or enter your own</label>
+          <input class="input" id="customAmount" type="number" min="1" max="100000" step="1" placeholder="$" />
+        </div>
+
+        <div class="field">
+          <label class="field__label" for="donateMessage">Message (optional)</label>
+          <input class="input" id="donateMessage" type="text" maxlength="500" placeholder="Say hi (optional)" />
+        </div>
+
+        <button class="btn btn--primary btn--block" id="donateSubmit" type="button">Donate</button>
+
+        <div class="banner" id="donateStatus" hidden style="margin-top:1rem;"></div>
+      </div>
     </main>
 
     <footer class="footer">
@@ -62,24 +90,21 @@
           <div class="footer__col">
             <strong>Product</strong>
             <a href="app.html">Research console</a>
-            <a href="index.html#planes">Architecture</a>
+            <a href="pricing.html">Pricing</a>
           </div>
           <div class="footer__col">
             <strong>Enterprise</strong>
             <a href="mailto:sales@wardline.example">Talk to sales</a>
           </div>
-          <div class="footer__col">
-            <strong>Community</strong>
-            <a href="donate.html">Support Wardline</a>
-          </div>
         </div>
       </div>
     </footer>
+
 
     <div class="toast-stack" id="toastStack" aria-live="polite"></div>
 
     <script src="assets/js/theme.js"></script>
     <script src="assets/js/api.js"></script>
-    <script src="assets/js/pricing.js"></script>
+    <script src="assets/js/donate.js"></script>
   </body>
 </html>
