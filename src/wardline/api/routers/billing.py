@@ -8,13 +8,15 @@ Stripe has no API key of ours to send.
 from __future__ import annotations
 
 from fastapi import APIRouter, Depends, Header, HTTPException, Request
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 from sqlalchemy.orm import Session
 
 from wardline.api.deps import get_current_user, get_db
+from wardline.common.config import get_settings
 from wardline.common.errors import AccessDeniedError
 from wardline.common.plans import public_plan_list
 from wardline.governance import billing
+from wardline.governance.rate_limit import limiter
 from wardline.storage.models.governance import User
 
 router = APIRouter(prefix="/v1/billing", tags=["billing"])
@@ -22,6 +24,11 @@ router = APIRouter(prefix="/v1/billing", tags=["billing"])
 
 class CheckoutRequest(BaseModel):
     plan_id: str
+
+
+class DonateRequest(BaseModel):
+    amount_usd: float = Field(gt=0)
+    message: str | None = Field(default=None, max_length=500)
 
 
 @router.get("/plans")
@@ -64,6 +71,19 @@ def portal(db: Session = Depends(get_db), user: User = Depends(get_current_user)
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"portal_url": url}
+
+
+@router.post("/donate")
+@limiter.limit(f"{get_settings().rate_limit_donate_per_minute}/minute")
+def donate(request: Request, body: DonateRequest, db: Session = Depends(get_db)) -> dict:
+    """Public, no account required -- a donation never grants a plan or
+    any other entitlement (see governance/billing.create_donation_checkout_session's
+    docstring), so there's nothing here that needs a logged-in caller."""
+    try:
+        url = billing.create_donation_checkout_session(db, amount_usd=body.amount_usd, message=body.message)
+    except AccessDeniedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"checkout_url": url}
 
 
 @router.post("/webhook")

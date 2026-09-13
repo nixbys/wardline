@@ -66,6 +66,8 @@ dependencies = [
   "pyotp>=2.10.0",
   "stripe>=11.1",
   "datasketch>=1.6",
+  "websockets>=13.1",  # api/routers/globe.py's short-lived AISStream collector -- the
+                        # AISStream API is WebSocket-only, no REST equivalent exists
 ]
 
 [project.scripts]

@@ -28,6 +28,7 @@ from wardline.storage.models.billing import (
     STATUS_CANCELED,
     STATUS_INCOMPLETE,
     STATUS_PAST_DUE,
+    Donation,
     Subscription,
 )
 from wardline.storage.models.governance import User
@@ -202,6 +203,59 @@ def create_portal_session(db: Session, user: User) -> str:
     return portal.url
 
 
+_MIN_DONATION_CENTS = 100  # $1 -- Stripe itself rejects most currencies below this
+_MAX_DONATION_CENTS = 100_000_00  # $100,000 -- a sanity ceiling, not a real business limit
+
+
+def create_donation_checkout_session(db: Session, *, amount_usd: float, message: str | None = None) -> str:
+    """A one-time payment (`mode="payment"`), not a subscription -- no
+    `Subscription` row is touched and no plan is granted. Unlike
+    `create_checkout_session`'s paid plans, there's no pre-created Stripe
+    Price object to look up (`_price_id_for`): a donation's amount is
+    chosen by the donor, so this builds a `price_data` line item inline.
+    Deliberately takes no `user`/`Session`-bound caller -- donating never
+    requires a wardline account (see `POST /v1/billing/donate`).
+    """
+    amount_cents = round(amount_usd * 100)
+    if not (_MIN_DONATION_CENTS <= amount_cents <= _MAX_DONATION_CENTS):
+        raise AccessDeniedError(
+            f"donation amount must be between ${_MIN_DONATION_CENTS / 100:.2f} "
+            f"and ${_MAX_DONATION_CENTS / 100:,.2f}"
+        )
+
+    settings = get_settings()
+    if settings.billing_mode != "stripe":
+        db.add(Donation(amount_cents=amount_cents, message=message))
+        db.flush()
+        return f"{settings.billing_success_url}&mock=true&donation=true"
+
+    import stripe
+
+    stripe.api_key = settings.stripe_api_key
+    session = stripe.checkout.Session.create(
+        mode="payment",
+        line_items=[
+            {
+                "price_data": {
+                    "currency": "usd",
+                    "product_data": {"name": "Support Wardline"},
+                    "unit_amount": amount_cents,
+                },
+                "quantity": 1,
+            }
+        ],
+        success_url=settings.billing_success_url,
+        cancel_url=settings.billing_cancel_url,
+        metadata={"kind": "donation", "message": message or ""},
+    )
+    # The Donation row itself is created from the webhook once Stripe
+    # confirms payment (handle_webhook_event) -- same "webhook is the only
+    # writer of confirmed state" principle create_checkout_session follows
+    # for paid plans, not duplicated here for a payment that might not
+    # complete.
+    return session.url
+
+
 def verify_webhook_signature(payload: bytes, sig_header: str) -> dict:
     settings = get_settings()
     if not settings.stripe_webhook_secret:
@@ -224,6 +278,26 @@ def handle_webhook_event(db: Session, event: dict) -> None:
     with a hand-built event dict and no real Stripe signature."""
     event_type = event.get("type", "")
     data = event.get("data", {}).get("object", {})
+
+    if event_type == "checkout.session.completed" and data.get("metadata", {}).get("kind") == "donation":
+        metadata = data.get("metadata", {})
+        # amount_total (what Stripe actually charged) is authoritative here,
+        # not whatever amount the client originally requested -- there's no
+        # server-side price object to cross-check a donation's price_data
+        # against, so trust Stripe's own confirmed total, not the request.
+        amount_cents = data.get("amount_total")
+        if amount_cents is None:
+            return
+        db.add(
+            Donation(
+                amount_cents=amount_cents,
+                currency=data.get("currency", "usd"),
+                message=metadata.get("message") or None,
+                stripe_checkout_session_id=data.get("id"),
+            )
+        )
+        db.flush()
+        return
 
     if event_type == "checkout.session.completed":
         metadata = data.get("metadata", {})

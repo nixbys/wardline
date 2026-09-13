@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ops Console — Wardline</title>
+    <link rel="icon" href="data:," />
+    <link rel="stylesheet" href="assets/css/tokens.css" />
+    <link rel="stylesheet" href="assets/css/base.css" />
+    <link rel="stylesheet" href="assets/css/components.css" />
+    <link rel="stylesheet" href="assets/css/app.css" />
+    <link rel="stylesheet" href="assets/css/ops.css" />
+  </head>
+  <body>
+    <div class="app-shell">
+      <aside class="sidebar">
+        <div class="sidebar__brand">
+          <span class="nav__mark" aria-hidden="true">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none">
+              <path d="M12 2 3 7v10l9 5 9-5V7l-9-5Z" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" />
+            </svg>
+          </span>
+          Wardline <span style="color:var(--text-tertiary); font-weight:400;">/ Ops</span>
+        </div>
+
+        <nav class="ops-nav" id="opsNav" aria-label="Ops Console sections">
+          <button class="ops-nav__item" data-panel="jobs" type="button">Jobs</button>
+          <button class="ops-nav__item" data-panel="audit" type="button">Audit</button>
+          <button class="ops-nav__item" data-panel="entity-review" type="button">Entity Review</button>
+          <button class="ops-nav__item" data-panel="engagements" type="button">Engagements</button>
+          <button class="ops-nav__item" data-panel="users" type="button">Users</button>
+          <button class="ops-nav__item" data-panel="kill-switch" type="button">Kill Switch</button>
+          <button class="ops-nav__item" data-panel="iceberg" type="button">Iceberg Exports</button>
+          <button class="ops-nav__item" data-panel="graph" type="button">Graph Browser</button>
+        </nav>
+
+        <div class="sidebar__footer">
+          <button class="sidebar__conn" id="connStatusBtn" type="button" title="Open connection settings">
+            <span class="status-dot" id="connDot"></span>
+            <strong id="connLabel">Not connected</strong>
+          </button>
+          <button class="btn btn--icon btn--ghost tooltip" data-theme-toggle data-tooltip="Switch to dark" aria-pressed="false" aria-label="Toggle color theme">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="1.6" />
+              <path d="M12 2.5v2M12 19.5v2M4.2 4.2l1.4 1.4M18.4 18.4l1.4 1.4M2.5 12h2M19.5 12h2M4.2 19.8l1.4-1.4M18.4 5.6l1.4-1.4" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+      </aside>
+
+      <div class="main">
+        <header class="topbar">
+          <div class="topbar__title"><span>Ops Console</span></div>
+        </header>
+
+        <div class="ops-content" id="opsContent">
+          <div class="banner banner--warning" id="accessBanner" hidden>
+            Admin or analyst access required. Open connection settings and connect with a key for
+            an account with one of those roles.
+          </div>
+
+          <!-- Jobs -->
+          <section class="ops-panel" id="panel-jobs" data-panel="jobs" hidden>
+            <div class="ops-panel__head">
+              <h2>Jobs</h2>
+              <div class="ops-filters">
+                <select class="input" id="jobsStatusFilter">
+                  <option value="">All statuses</option>
+                  <option value="pending">pending</option>
+                  <option value="running">running</option>
+                  <option value="succeeded">succeeded</option>
+                  <option value="failed">failed</option>
+                </select>
+                <button class="btn btn--secondary btn--sm" id="jobsRefreshBtn" type="button">Refresh</button>
+              </div>
+            </div>
+            <div class="ops-table-wrap"><table class="ops-table" id="jobsTable"></table></div>
+            <div class="card card--pad" id="jobLogCard" hidden>
+              <div class="ops-panel__head">
+                <h3 id="jobLogTitle">Live log</h3>
+                <button class="btn btn--icon btn--ghost btn--sm" id="jobLogCloseBtn" type="button">✕</button>
+              </div>
+              <pre class="ops-terminal" id="jobLogOutput"></pre>
+            </div>
+          </section>
+
+          <!-- Audit -->
+          <section class="ops-panel" id="panel-audit" data-panel="audit" hidden>
+            <div class="ops-panel__head">
+              <h2>Audit log</h2>
+              <div class="ops-filters">
+                <input class="input" id="auditUserFilter" type="text" placeholder="user id (optional)" />
+                <button class="btn btn--secondary btn--sm" id="auditRefreshBtn" type="button">Refresh</button>
+              </div>
+            </div>
+            <div class="ops-table-wrap"><table class="ops-table" id="auditTable"></table></div>
+          </section>
+
+          <!-- Entity Review -->
+          <section class="ops-panel" id="panel-entity-review" data-panel="entity-review" hidden>
+            <div class="ops-panel__head">
+              <h2>Entity review queue</h2>
+              <button class="btn btn--secondary btn--sm" id="entityReviewRefreshBtn" type="button">Refresh</button>
+            </div>
+            <div class="ops-table-wrap"><table class="ops-table" id="entityReviewTable"></table></div>
+          </section>
+
+          <!-- Engagements -->
+          <section class="ops-panel" id="panel-engagements" data-panel="engagements" hidden>
+            <div class="ops-panel__head"><h2>Engagements</h2></div>
+            <form class="card card--pad ops-form" id="engagementForm">
+              <div class="field"><label class="field__label">Target</label><input class="input" id="engTarget" required /></div>
+              <div class="field"><label class="field__label">Scope note</label><input class="input" id="engScopeNote" required /></div>
+              <div class="field"><label class="field__label">Evidence reference</label><input class="input" id="engEvidenceRef" required /></div>
+              <div class="field"><label class="field__label">Valid from</label><input class="input" id="engValidFrom" type="datetime-local" required /></div>
+              <div class="field"><label class="field__label">Valid until</label><input class="input" id="engValidUntil" type="datetime-local" required /></div>
+              <button class="btn btn--primary" type="submit">Create engagement</button>
+            </form>
+            <div class="ops-table-wrap"><table class="ops-table" id="engagementsTable"></table></div>
+          </section>
+
+          <!-- Users -->
+          <section class="ops-panel" id="panel-users" data-panel="users" hidden>
+            <div class="ops-panel__head"><h2>Users</h2></div>
+            <form class="card card--pad ops-form ops-form--inline" id="userForm">
+              <input class="input" id="userEmail" type="email" placeholder="email" required />
+              <select class="input" id="userRole">
+                <option value="viewer">viewer</option>
+                <option value="analyst">analyst</option>
+                <option value="admin">admin</option>
+              </select>
+              <button class="btn btn--secondary" type="submit" data-mode="create">Create (mints a key)</button>
+              <button class="btn btn--secondary" type="submit" data-mode="invite">Invite (emails a link)</button>
+            </form>
+            <div class="ops-table-wrap"><table class="ops-table" id="usersTable"></table></div>
+          </section>
+
+          <!-- Kill Switch -->
+          <section class="ops-panel" id="panel-kill-switch" data-panel="kill-switch" hidden>
+            <div class="ops-panel__head"><h2>Kill switch</h2></div>
+            <div class="card card--pad">
+              <p>Freezes <code>POST /v1/query</code> for every caller without locking admins out of the admin surface itself.</p>
+              <p class="ops-status-line">Current state: <strong id="killSwitchState">unknown</strong></p>
+              <button class="btn btn--danger" id="killSwitchToggleBtn" type="button">Toggle</button>
+            </div>
+          </section>
+
+          <!-- Iceberg -->
+          <section class="ops-panel" id="panel-iceberg" data-panel="iceberg" hidden>
+            <div class="ops-panel__head">
+              <h2>Iceberg exports</h2>
+              <button class="btn btn--primary btn--sm" id="icebergExportBtn" type="button">Trigger export</button>
+            </div>
+            <div class="ops-table-wrap"><table class="ops-table" id="icebergTable"></table></div>
+          </section>
+
+          <!-- Graph Browser -->
+          <section class="ops-panel" id="panel-graph" data-panel="graph" hidden>
+            <div class="ops-panel__head"><h2>Graph browser</h2></div>
+            <form class="ops-form ops-form--inline" id="graphSearchForm">
+              <input class="input" id="graphSearchName" type="text" placeholder="Entity name (e.g. Airbnb)" required />
+              <button class="btn btn--secondary" type="submit">Search</button>
+            </form>
+            <div id="graphResult"></div>
+          </section>
+        </div>
+      </div>
+    </div>
+
+    <div class="modal-overlay" id="settingsModal" hidden>
+      <div class="modal" role="dialog" aria-modal="true" aria-labelledby="settingsTitle">
+        <div class="modal__header">
+          <div>
+            <h3 class="modal__title" id="settingsTitle">Connection settings</h3>
+            <p class="field__hint">Stored only in this browser's localStorage. Needs an admin or analyst key.</p>
+          </div>
+          <button class="btn btn--icon btn--ghost" data-close-modal="settingsModal" aria-label="Close" type="button">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" aria-hidden="true">
+              <path d="M6 6l12 12M18 6 6 18" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" />
+            </svg>
+          </button>
+        </div>
+        <div class="modal__body">
+          <div class="field">
+            <label class="field__label" for="baseUrlInput">API base URL</label>
+            <input class="input" id="baseUrlInput" type="text" placeholder="http://localhost:8000" />
+          </div>
+          <div class="field">
+            <label class="field__label" for="apiKeyInput">API key</label>
+            <input class="input" id="apiKeyInput" type="password" placeholder="wl_…" autocomplete="off" />
+          </div>
+          <div class="banner" id="settingsStatus" hidden></div>
+        </div>
+        <div class="modal__footer">
+          <button class="btn btn--primary" id="settingsSaveBtn" type="button">Save & connect</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="toast-stack" id="toastStack" aria-live="polite"></div>
+
+    <script src="assets/js/theme.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/ops.js"></script>
+  </body>
+</html>

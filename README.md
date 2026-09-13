@@ -19,6 +19,7 @@ This is the buildable translation of a fictional "omniscient" information engine
 - [How to use it](#how-to-use-it)
 - [Adding a new source](#adding-a-new-source)
 - [Authorized pentesting connectors](#authorized-pentesting-connectors)
+- [Live Globe](#live-globe)
 - [Self-serve accounts](#self-serve-accounts)
 - [Billing](#billing)
 - [Governance](#governance)
@@ -225,20 +226,27 @@ RBAC answers "who are you." ABAC answers "what license does this document carry.
 
 `src/wardline/storage/models/engagements.py` + `governance/engagements.py` + `governance/pep.py:enforce_engagement_scope` implement the primitive: an `Engagement` records a target, a scope note, a reference to the authorization evidence (a signed SOW, a ticket), and a validity window. Any connector with `requires_engagement = True` cannot run without an active, non-expired, non-revoked engagement whose target covers the requested lookup (`POST /v1/admin/connectors/{name}/run` then requires `params.target` and `engagement_id`) — checked and rejected with a 403 *before* a job is even queued, not after. `target_in_scope` handles both domain suffixes ("acme.com" covers "www.acme.com") and real CIDR containment ("10.0.0.0/24" covers "10.0.0.5" but not "10.0.1.5"), since infrastructure engagements are routinely scoped to a network range rather than one host.
 
-Two connectors sit behind this gate today, inspired by (but not built from — see the licensing note below) the tool categories in [chiron](https://github.com/nixbys/chiron):
+Three connectors sit behind this gate today. Two are inspired by (but not built from — see the licensing note below) the tool categories in [chiron](https://github.com/nixbys/chiron); the third calls the exact same tool chiron itself already runs in production (its [ADR 003](https://github.com/nixbys/chiron/blob/main/docs/adr/003-spiderfoot-integration.md)), just from wardline's own connector instead of chiron's MCP layer — per internal planning on how these two projects avoid running two independent copies of it:
 
 - **`shodan`** (`connectors/threat_intel.py`) — passive exposure lookup against Shodan's API. Needs `SHODAN_API_KEY`.
 - **`nmap`** (`connectors/nmap_scan.py`) — active network scan. Runs in an isolated sidecar, never in the api/worker containers: `docker compose -f docker/docker-compose.yml --profile toolrunner up -d toolrunner` (see `docker/toolrunner/`), then set `TOOLRUNNER_URL`/`TOOLRUNNER_TOKEN`. The sidecar runs as a non-root user with no added capabilities — it only ever performs a TCP-connect-style scan, which doesn't need raw sockets.
+- **`spiderfoot`** (`connectors/spiderfoot.py`) — 200+ correlated OSINT modules (DNS, breach/leak databases, threat intel, social, cloud assets) against one target in a single scan. MIT-licensed, called over a network boundary at `SPIDERFOOT_URL` — either wardline's own optional sidecar (`docker compose --profile spiderfoot up -d spiderfoot`) or an already-running instance another cooperating deployment owns. A scan's async start → poll → retrieve lifecycle (minutes to tens of minutes) all happens inside `discover()`, bounded by `SPIDERFOOT_MAX_WAIT_SECONDS`; each correlated finding becomes its own citable document, not one giant blob.
 
-Both are ingested through the normal pipeline (chunked, embedded, queryable, cited) but tagged `internal-only` (`governance/abac.py`), so results are visible to `admin`/`analyst` but not `viewer` — a materially different sensitivity class than public-corpus documents.
+All three are ingested through the normal pipeline (chunked, embedded, queryable, cited) but tagged `internal-only` (`governance/abac.py`), so results are visible to `admin`/`analyst` but not `viewer` — a materially different sensitivity class than public-corpus documents.
 
 **Extending this to more of chiron's categories** (sqlmap, nuclei, masscan, gobuster, nikto, theHarvester, YARA, CVE/MITRE mapping) means repeating the exact same pattern: a new `Connector` subclass with `requires_engagement = True`, either a direct API call (like `shodan`) or a new allowlisted `/scan/<tool>` route on the toolrunner sidecar (like `nmap`) — never a generic "run any command" surface, and never vendoring another project's source into this repo (see below).
 
-**Before enabling either connector for anything customer-facing, not just internal use:**
-- **License boundary, on purpose**: this integration calls the same *kind* of open-source tools chiron bundles (nmap) and the same third-party APIs (Shodan) — it does not import, fork, or vendor chiron's own code, which is AGPL-3.0-or-later. Doing that would put this repository's combined work under AGPL too, including the network-service copyleft clause that would obligate offering source to every user of a hosted product built on it. Calling an independent, separately-licensed tool/service over a network boundary (the same pattern this project already uses for Postgres, Neo4j, and OpenSearch, all copyleft-licensed themselves) doesn't carry that obligation — keep it that way if you extend this further, and get real legal review before vendoring anything directly instead of calling it.
+**Before enabling any of these connectors for anything customer-facing, not just internal use:**
+- **License boundary, on purpose**: this integration calls the same *kind* of open-source tools chiron bundles (nmap) and the same third-party APIs (Shodan) — it does not import, fork, or vendor chiron's own code, which is AGPL-3.0-or-later. Doing that would put this repository's combined work under AGPL too, including the network-service copyleft clause that would obligate offering source to every user of a hosted product built on it. Calling an independent, separately-licensed tool/service over a network boundary (the same pattern this project already uses for Postgres, Neo4j, and OpenSearch, all copyleft-licensed themselves) doesn't carry that obligation — keep it that way if you extend this further, and get real legal review before vendoring anything directly instead of calling it. SpiderFoot itself is MIT (no AGPL exposure at all, whether or not chiron is anywhere nearby), but SpiderFoot's *own* modules call third-party services with their own ToS (see next bullet) — the license boundary reasoning above doesn't make that go away.
 - **Tool-specific licenses**: nmap, sqlmap, and several of chiron's other tools carry their own (sometimes GPL-family, sometimes custom) licenses with their own redistribution terms, separate from the AGPL question above — review each one's license before bundling/redistributing it as part of a commercial product, not just before running it internally.
-- **Third-party API Terms of Service**: Shodan's (and VirusTotal's/OTX's, if added later) ToS govern redistribution/resale of data their APIs return — review those before this connector's output feeds anything a paying customer sees.
-- **This is active tooling, not just OSINT anymore**: `nmap` actively probes whatever target its engagement scopes — only ever point it at infrastructure you have explicit, documented authorization to test. See `docs/COMMERCIALIZATION_ROADMAP.md` for the compliance/insurance groundwork this implies before selling it as a product.
+- **Third-party API Terms of Service**: Shodan's (and VirusTotal's/OTX's, if added later) ToS govern redistribution/resale of data their APIs return — review those before this connector's output feeds anything a paying customer sees. Several of SpiderFoot's 200+ modules call third-party APIs with their own similar terms; review the module set actually enabled (`SPIDERFOOT_USE_CASE`) before its output reaches a paying customer, same as Shodan's.
+- **This is active tooling, not just OSINT anymore**: `nmap` actively probes whatever target its engagement scopes, and a handful of SpiderFoot's modules do too (subdomain brute-forcing, an optional nmap sub-scan) even though most are passive — only ever point either at infrastructure you have explicit, documented authorization to test. See internal planning notes for the compliance/insurance groundwork this implies before selling it as a product.
+
+## Live Globe
+
+`globe/` is a public, no-login CesiumJS 3D view of live flights, vessels, satellites, and traffic — public data, the same trust tier as the marketing pages, not the research console. It's an original build inspired by [bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view) (MIT, credited in-app and in `THIRD_PARTY_NOTICES.md`), talking to `src/wardline/api/routers/globe.py` — a thin, rate-limited, unauthenticated proxy so no visitor needs their own OpenSky/AISStream/TomTom/OpenAI key. Aircraft and satellites work with zero configuration; vessels/traffic/voice each need one optional key (`AISSTREAM_API_KEY`, `TOMTOM_API_KEY`, `OPENAI_API_KEY`) and degrade gracefully — `GET /v1/globe/config` reports which layers are actually usable — without one. See `globe/README.md` to run it.
+
+This is deliberately a slice of what the upstream project does, not a full port. A fuller integration is planned per internal notes (a real fork, [nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view), consumed via its own subpath exports rather than vendored) — it doesn't fit in one pass. Two of its citable data sources — USGS earthquakes and NASA FIRMS fire detections — are also real ingestion `Connector`s (`connectors/usgs_earthquakes.py`, `connectors/nasa_firms.py`), separate from the live-only globe view, since a discrete timestamped event is something a RAG answer can actually cite and a continuously-updating position isn't.
 
 ## Self-serve accounts
 
@@ -267,7 +275,7 @@ curl -X POST http://localhost:8000/v1/auth/mfa/confirm \
 
 An admin can invite a teammate instead of minting a key on their behalf — `POST /v1/admin/users/invite {"email": ..., "role": ...}` emails a link to `web/accept-invite.html`, where the recipient sets their own password.
 
-Not yet built: passkeys/WebAuthn (TOTP is the first cut), org/workspace seat management, and the encrypted-conversation-vault privacy model — all tracked in `docs/COMMERCIALIZATION_ROADMAP.md`.
+Not yet built: passkeys/WebAuthn (TOTP is the first cut), org/workspace seat management, and the encrypted-conversation-vault privacy model — all tracked internally.
 
 ## Billing
 
@@ -284,7 +292,14 @@ curl -X POST http://localhost:8000/v1/billing/checkout \
   -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"plan_id": "pro"}'
 ```
 
-Not yet built: per-plan rate limiting (today's `slowapi` limits are still flat, not plan-scoped — see `docs/COMMERCIALIZATION_ROADMAP.md`), and org-level (rather than per-user) subscriptions for the Team plan's actual seat management.
+**Donations** (`POST /v1/billing/donate`, public, no account/bearer token needed) are a separate, deliberately unrelated flow: a one-time Stripe Checkout payment (`mode="payment"`, dynamic `price_data`, no pre-created Price object) that records a `Donation` row and grants no plan/entitlement — Wardline stays free to use regardless of whether someone donates. `web/donate.html` is the UI; it uses the same `BILLING_MODE=mock|stripe` convention as everything else in this section.
+
+```bash
+curl -X POST http://localhost:8000/v1/billing/donate \
+  -H "Content-Type: application/json" -d '{"amount_usd": 10, "message": "keep it free"}'
+```
+
+Not yet built: per-plan rate limiting (today's `slowapi` limits are still flat, not plan-scoped — tracked internally), and org-level (rather than per-user) subscriptions for the Team plan's actual seat management.
 
 ## Governance
 
@@ -369,4 +384,6 @@ privately — please don't open a public issue for a suspected vulnerability.
 
 Apache License 2.0 — see [`LICENSE`](LICENSE). This includes an explicit patent grant, which
 matters given the security-tooling surface area ([Authorized pentesting
-connectors](#authorized-pentesting-connectors)) this repo ships.
+connectors](#authorized-pentesting-connectors)) this repo ships. Third-party code this repo is
+inspired by or depends on beyond ordinary open-source dependencies is credited in
+[`THIRD_PARTY_NOTICES.md`](THIRD_PARTY_NOTICES.md).

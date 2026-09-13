@@ -52,8 +52,8 @@ a fix has shipped and we've agreed on disclosure — see below.
   host-level access to the deployment (out of this project's threat model —
   see [Production readiness](README.md#production-readiness) for the
   secrets/TLS/IAM posture that's the operator's responsibility).
-- Missing rate limits on non-security-sensitive endpoints (tracked as a
-  product gap in `docs/COMMERCIALIZATION_ROADMAP.md`, not a vulnerability).
+- Missing rate limits on non-security-sensitive endpoints (a known product
+  gap already tracked internally, not a vulnerability).
 - Anything in `.venv/`, generated caches, or other non-shipped local files.
 
 ## Supported versions

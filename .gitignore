@@ -15,7 +15,14 @@ htmlcov/
 .coverage
 dist/
 build/
+node_modules/
 data/bronze/
 data/iceberg-warehouse/
 *.log
 .DS_Store
+# Internal planning notes -- kept locally as personal reference/guidance,
+# deliberately not tracked or distributed with the repo.
+docs/MASTER_ROADMAP.md
+docs/COMMERCIALIZATION_ROADMAP.md
+docs/LIVE_GLOBE_FULL_INTEGRATION_ROADMAP.md
+docs/CHIRON_WARDLINE_BRIDGE_ROADMAP.md

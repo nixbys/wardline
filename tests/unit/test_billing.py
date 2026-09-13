@@ -15,7 +15,7 @@ from wardline.common.errors import AccessDeniedError
 from wardline.common.plans import ENTERPRISE, FREE, PRO, TEAM, get_plan, public_plan_list
 from wardline.governance import billing, entitlements, orgs
 from wardline.storage.models.base import Base
-from wardline.storage.models.billing import STATUS_ACTIVE, STATUS_CANCELED, Subscription
+from wardline.storage.models.billing import STATUS_ACTIVE, STATUS_CANCELED, Donation, Subscription
 from wardline.storage.models.governance import User
 from wardline.storage.models.orgs import Organization
 
@@ -24,7 +24,8 @@ from wardline.storage.models.orgs import Organization
 def db():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(
-        engine, tables=[User.__table__, Subscription.__table__, Organization.__table__]
+        engine,
+        tables=[User.__table__, Subscription.__table__, Organization.__table__, Donation.__table__],
     )
     with Session(engine) as session:
         yield session
@@ -165,6 +166,60 @@ def test_webhook_for_unknown_customer_is_a_no_op(db, user):
     billing.handle_webhook_event(
         db, _event("customer.subscription.updated", {"customer": "cus_unknown", "status": "active"})
     )
+
+
+# --- governance/billing.py donations (one-time, account-free) ------
+
+
+def test_mock_donation_records_a_donation_row_immediately(db):
+    url = billing.create_donation_checkout_session(db, amount_usd=25, message="keep it free")
+    assert "donation=true" in url
+    donation = db.query(Donation).one()
+    assert donation.amount_cents == 2500
+    assert donation.message == "keep it free"
+
+
+def test_donation_never_touches_subscription_state(db, user):
+    billing.create_donation_checkout_session(db, amount_usd=10)
+    assert billing.get_subscription(db, user) is None
+    assert billing.current_plan_id(db, user) == FREE
+
+
+def test_donation_rejects_amounts_outside_the_allowed_range(db):
+    with pytest.raises(AccessDeniedError, match="must be between"):
+        billing.create_donation_checkout_session(db, amount_usd=0.50)
+    with pytest.raises(AccessDeniedError, match="must be between"):
+        billing.create_donation_checkout_session(db, amount_usd=1_000_000)
+
+
+def test_webhook_donation_completed_records_a_donation_row():
+    event = _event(
+        "checkout.session.completed",
+        {
+            "id": "cs_test_123",
+            "amount_total": 500,
+            "currency": "usd",
+            "metadata": {"kind": "donation", "message": "thanks!"},
+        },
+    )
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine, tables=[Donation.__table__])
+    with Session(engine) as session:
+        billing.handle_webhook_event(session, event)
+        donation = session.query(Donation).one()
+        assert donation.amount_cents == 500
+        assert donation.message == "thanks!"
+        assert donation.stripe_checkout_session_id == "cs_test_123"
+
+
+def test_webhook_donation_completed_without_amount_is_a_no_op():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine, tables=[Donation.__table__])
+    with Session(engine) as session:
+        billing.handle_webhook_event(
+            session, _event("checkout.session.completed", {"metadata": {"kind": "donation"}})
+        )
+        assert session.query(Donation).count() == 0
 
 
 # --- org-scoped billing (Pillar 5's Team/Enterprise "one org, several
