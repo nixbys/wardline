@@ -75,6 +75,17 @@ class EntityResolutionReview(Base, TimestampMixin):
     entity_b_id: Mapped[str | None] = mapped_column(
         String(64), ForeignKey("entities.id", ondelete="SET NULL"), nullable=True
     )
+    # Snapshotted at queue_for_review() time, when both entities are
+    # guaranteed to still exist -- entity_b_id (and its canonical_name)
+    # disappears the moment a "merged" decision actually runs (SET NULL
+    # above). Without this snapshot, a resolved review row remembers a
+    # decision was made but not what it was about, and
+    # entity_resolution/splink_batch.py's supervised training (Phase 5,
+    # tracked locally) would have no labeled pair to train from at all
+    # once the very merges it wants to learn from have happened.
+    entity_a_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    entity_b_name: Mapped[str | None] = mapped_column(String(512), nullable=True)
+    entity_type: Mapped[str | None] = mapped_column(String(64), nullable=True)
     score: Mapped[float] = mapped_column(Float, nullable=False)
     status: Mapped[str] = mapped_column(String(16), default="pending")  # pending|merged|rejected
     decided_by: Mapped[str | None] = mapped_column(
