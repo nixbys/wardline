@@ -18,6 +18,7 @@ from wardline.common.logging import get_logger
 from wardline.governance import audit, pep
 from wardline.query.llm_client import get_llm_client
 from wardline.query.render import watermark
+from wardline.query.understanding import coerce_date_filters
 from wardline.query.verify import verify_citations
 from wardline.storage.models.governance import User
 
@@ -73,7 +74,15 @@ def run_agent(
             continue
 
         if tool == "search_text":
-            result = tools.search_text(db, args.get("query", question), k=args.get("k", 10), filters=filters)
+            # Per-call filters (e.g. a temporal-comparison question's two
+            # differently-dated searches, see agent/prompts.py) layer on top
+            # of the request-level ones rather than replacing them outright --
+            # a caller-supplied filter like `lang` should still apply to
+            # every call in the session even if the model only varies dates.
+            call_filters = coerce_date_filters({**filters, **(args.get("filters") or {})})
+            result = tools.search_text(
+                db, args.get("query", question), k=args.get("k", 10), filters=call_filters
+            )
         elif tool == "graph_lookup":
             result = tools.graph_lookup(db, args.get("entity", question), args.get("relation"), args.get("hops", 1))
         else:

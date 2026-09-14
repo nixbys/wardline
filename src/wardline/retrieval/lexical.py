@@ -29,9 +29,16 @@ JOIN documents d ON d.id = c.doc_id
 WHERE c.tsv @@ websearch_to_tsquery('pg_catalog.english', :q)
   AND d.status = 'active'
   AND (CAST(:lang AS text) IS NULL OR d.lang = CAST(:lang AS text))
+  -- Half-open range [published_after, published_before) -- lets two
+  -- adjacent periods (e.g. "2023" and "2024" for a temporal-comparison
+  -- question) be scoped back-to-back with no double-counted boundary day.
   AND (
     CAST(:published_after AS timestamptz) IS NULL
     OR d.published_at >= CAST(:published_after AS timestamptz)
+  )
+  AND (
+    CAST(:published_before AS timestamptz) IS NULL
+    OR d.published_at < CAST(:published_before AS timestamptz)
   )
 ORDER BY score DESC
 LIMIT :k
@@ -54,6 +61,7 @@ def lexical_search(
             "q": query,
             "lang": filters.get("lang"),
             "published_after": filters.get("published_after"),
+            "published_before": filters.get("published_before"),
             "k": k,
         },
     ).fetchall()

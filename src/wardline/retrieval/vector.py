@@ -17,9 +17,15 @@ JOIN documents d ON d.id = c.doc_id
 WHERE c.embedding IS NOT NULL
   AND d.status = 'active'
   AND (CAST(:lang AS text) IS NULL OR d.lang = CAST(:lang AS text))
+  -- Half-open range [published_after, published_before) -- see
+  -- retrieval/lexical.py's identical filter for why.
   AND (
     CAST(:published_after AS timestamptz) IS NULL
     OR d.published_at >= CAST(:published_after AS timestamptz)
+  )
+  AND (
+    CAST(:published_before AS timestamptz) IS NULL
+    OR d.published_at < CAST(:published_before AS timestamptz)
   )
 ORDER BY c.embedding <=> (:embedding)::vector
 LIMIT :k
@@ -37,6 +43,7 @@ def vector_search(
             "embedding": str(embedding),
             "lang": filters.get("lang"),
             "published_after": filters.get("published_after"),
+            "published_before": filters.get("published_before"),
             "k": k,
         },
     ).fetchall()
