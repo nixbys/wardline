@@ -5,7 +5,7 @@
 [![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](pyproject.toml)
 [![Contributions welcome](https://img.shields.io/badge/contributions-welcome-brightgreen.svg)](CONTRIBUTING.md)
 
-A lawful OSINT + AI research platform: hybrid retrieval-augmented generation (lexical + vector + knowledge graph) over public, licensed, or consented sources, with governance, an immutable audit log, and an agentic research mode.
+A lawful OSINT + AI research platform: hybrid retrieval-augmented generation (lexical + vector + knowledge graph) over public, licensed, or consented sources, with governance, an immutable audit log, and an agentic research mode that can compare evidence across time periods. Beyond the core research pipeline: self-serve accounts and billing (subscriptions and one-time donations), a public live geospatial view ([Live Globe](#live-globe)), an admin/analyst [Ops Console](#ops-console), and three engagement-gated connectors for authorized security assessments.
 
 This is the buildable translation of a fictional "omniscient" information engine (the report this repo was built from used *Hliðskjálf* from *The Irregular at Magic High School* as its reference point) into real, lawful architecture. It answers natural-language questions with **cited, verifiable answers**, never asserting a claim it can't point to a source for.
 
@@ -23,6 +23,8 @@ This is the buildable translation of a fictional "omniscient" information engine
 - [Self-serve accounts](#self-serve-accounts)
 - [Billing](#billing)
 - [Governance](#governance)
+- [Ops Console](#ops-console)
+- [Adaptive intelligence (opt-in)](#adaptive-intelligence-opt-in)
 - [Testing](#testing)
 - [Production readiness](#production-readiness)
 - [Scope reductions vs. the source report](#scope-reductions-vs-the-source-report)
@@ -35,7 +37,7 @@ This is the buildable translation of a fictional "omniscient" information engine
 
 This project deliberately does **not** implement mass interception of private communications, unauthorized access to systems, or anything resembling SIGINT/XKeyScore-style surveillance. Those are illegal almost everywhere (wiretapping/interception law, computer-misuse law, data-protection law) and are not "features left for later" — they are out of scope by design. Everything here operates over sources that are public, licensed for reuse, or provided by the user themselves (upload).
 
-This also means a category of *dual-use* connectors (Shodan-style exposure search, active network reconnaissance) is treated differently from ordinary public-corpus sources: see [Authorized pentesting connectors](#authorized-pentesting-connectors) below. Every one of them requires an active, target-scoped `Engagement` before it can run at all — the governance primitive isn't just scaffolding anymore, two real connectors sit behind it.
+This also means a category of *dual-use* connectors (Shodan-style exposure search, active network reconnaissance, correlated OSINT automation) is treated differently from ordinary public-corpus sources: see [Authorized pentesting connectors](#authorized-pentesting-connectors) below. Every one of them requires an active, target-scoped `Engagement` before it can run at all — the governance primitive isn't just scaffolding anymore, three real connectors sit behind it.
 
 ## Architecture
 
@@ -43,13 +45,13 @@ Seven planes, matching the source report's design:
 
 | Plane | Where it lives | What it does |
 |---|---|---|
-| Collection | `src/wardline/connectors/` | Wikipedia, Wikidata, SEC EDGAR, OpenCorporates, archive.org (Wayback Machine), user upload, and a robots.txt-respecting web crawler — all behind one `Connector` interface (`base.py`), discoverable via a plugin registry (`registry.py`) |
+| Collection | `src/wardline/connectors/` | Wikipedia, Wikidata, SEC EDGAR, OpenCorporates, archive.org (Wayback Machine), USGS earthquakes, NASA FIRMS fire detections, user upload, and a robots.txt-respecting web crawler — all behind one `Connector` interface (`base.py`), discoverable via a plugin registry (`registry.py`). Three more (Shodan, nmap, SpiderFoot) sit behind engagement-scoping — see [Authorized pentesting connectors](#authorized-pentesting-connectors) |
 | Ingestion & processing | `src/wardline/ingestion/` | HTML/PDF/OCR extraction, language detection, PII tagging, quality gates (quarantine on failure), structural chunking |
 | Storage lakehouse | `src/wardline/storage/` | Postgres (documents/chunks/entities/edges/governance), MinIO/S3 for bronze-tier raw bytes, Alembic migrations |
-| Retrieval substrate | `src/wardline/retrieval/` | Postgres `tsvector` lexical search (or real OpenSearch BM25, `LEXICAL_BACKEND=opensearch`) + `pgvector` HNSW semantic search, fused with Reciprocal Rank Fusion, reranked with a local cross-encoder |
-| Knowledge & fusion | `src/wardline/graph/` | spaCy NER, rule-based relation extraction, entity resolution (blocking → scoring → clustering → human review), Neo4j |
-| Query plane | `src/wardline/query/`, `src/wardline/agent/` | The RAG pipeline (`query/pipeline.py`) and the bounded agentic research loop (`agent/loop.py`), both citation-verified before returning |
-| Governance & security | `src/wardline/governance/` | Bearer-token auth, RBAC + ABAC, engagement-scoping for dual-use connectors, an admin kill switch, and an append-only audit log enforced by a Postgres trigger (not just application code) |
+| Retrieval substrate | `src/wardline/retrieval/` | Postgres `tsvector` lexical search (or real OpenSearch BM25, `LEXICAL_BACKEND=opensearch`) + `pgvector` HNSW semantic search, fused with Reciprocal Rank Fusion, reranked with a local cross-encoder, with a bounded-date-range filter (`published_after`/`published_before`) and an opt-in feedback-driven trust adjustment (`retrieval/feedback_signal.py`, off by default) |
+| Knowledge & fusion | `src/wardline/graph/` | spaCy NER, rule-based relation extraction, entity resolution (blocking → scoring → clustering → human review), Neo4j, with an opt-in active-learning pass that trains match weights from real human review decisions (`graph/entity_resolution/splink_batch.py`, off by default) |
+| Query plane | `src/wardline/query/`, `src/wardline/agent/` | The RAG pipeline (`query/pipeline.py`) and the bounded agentic research loop (`agent/loop.py`), both citation-verified before returning; the research-mode agent can scope two differently-dated searches to answer "how did X change between A and B" questions |
+| Governance & security | `src/wardline/governance/` | Bearer-token auth, RBAC + ABAC, engagement-scoping for dual-use connectors, an admin kill switch, and an append-only audit log enforced by a Postgres trigger (not just application code) — plus a mode-level coverage-gap report (`GET /v1/audit/coverage-gaps`) surfaced in the [Ops Console](#ops-console) |
 
 ## Setup
 
@@ -133,6 +135,14 @@ curl -X POST http://localhost:8000/v1/query \
 `mode` is `"fast"` (text-only retrieval), `"auto"` (text + knowledge graph, default), or `"research"` (bounded multi-step agent — decomposes the question, calls retrieval/graph tools iteratively up to a step/token budget, and requires every claim in its final answer to carry a citation before returning).
 
 By default the query/agent planes run against `LLM_CLIENT_MODE=mock` — a deterministic, no-network synthesizer that does real extractive work over whatever retrieval actually finds (so the whole pipeline is exercisable without an API key). Set `LLM_CLIENT_MODE=live`, `LLM_PROVIDER`, and `LLM_API_KEY` in `.env` for genuine grounded synthesis from a real model.
+
+**Bounded date ranges and period comparison**: `filters` accepts `published_after`/`published_before` (ISO dates, half-open range — `published_before` is exclusive), and plain-language "since 2020", "before 2020", and "between 2020 and 2023" are recognized automatically without setting `filters` at all. In `research` mode, the agent can also scope two differently-dated `search_text` calls itself for a "how did X change between A and B" question and compare what each period's sources actually say — a real synthesized comparison needs `LLM_CLIENT_MODE=live`, since the mock synthesizer only does extractive work, not reasoning across two result sets.
+
+```bash
+curl -X POST http://localhost:8000/v1/query \
+  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" \
+  -d '{"question": "How did Airbnb'"'"'s business change between 2020 and 2023?", "mode": "research"}'
+```
 
 ### 3. Inspect what happened
 
@@ -248,6 +258,8 @@ All three are ingested through the normal pipeline (chunked, embedded, queryable
 
 This is deliberately a slice of what the upstream project does, not a full port. A fuller integration is planned per internal notes (a real fork, [nixbys/gods-eye-view](https://github.com/nixbys/gods-eye-view), consumed via its own subpath exports rather than vendored) — it doesn't fit in one pass. Two of its citable data sources — USGS earthquakes and NASA FIRMS fire detections — are also real ingestion `Connector`s (`connectors/usgs_earthquakes.py`, `connectors/nasa_firms.py`), separate from the live-only globe view, since a discrete timestamped event is something a RAG answer can actually cite and a continuously-updating position isn't.
 
+**History comparison**: `GET /v1/globe/history?connector=usgs_earthquakes&start=&end=` reads ingested events directly (no query pipeline involved — this is "events in a box," not a cited answer) and the globe UI renders two chosen periods as two colored point sets side by side. Hard-allowlisted to `usgs_earthquakes`/`nasa_firms` only — the live proxy layers (flights/vessels/satellites/traffic) have no persisted history to compare at all, and the `documents` table this reads from also holds `internal-only` engagement-gated content this public, unauthenticated route must never expose.
+
 ## Self-serve accounts
 
 Two identity paths coexist, for two different kinds of caller: an admin still mints CLI/API keys directly (`create-admin-user`, `POST /v1/admin/users`) for scripts and service accounts, while a real person gets a password + optional MFA through `POST /v1/auth/*` (`src/wardline/governance/accounts.py`) — signing up, verifying email, logging in, resetting a forgotten password, and enabling TOTP two-factor with backup recovery codes. `web/login.html` is the UI for this; `web/app.html`'s "Sign in" prompt links to it.
@@ -308,13 +320,30 @@ Not yet built: per-plan rate limiting (today's `slowapi` limits are still flat, 
 - **Engagement scoping**: see above.
 - **Audit log**: every query (and every agent tool call) is written to `audit_events` before and after execution. The table has a `BEFORE UPDATE OR DELETE` trigger that unconditionally raises — this is enforced by Postgres itself, not application discipline (a plain `REVOKE` doesn't work here: table owners keep full privileges regardless of `GRANT`/`REVOKE`).
 
+## Ops Console
+
+`web/ops.html` — admin/analyst tooling, gated client-side on `GET /v1/auth/me`'s role as a UX nicety on top of the server-side 403s every endpoint it calls already enforces on its own. Eight panels, each a thin wrapper over a real endpoint, no fabricated data:
+
+- **Jobs** — every connector run, filterable by status; selecting one opens a live, terminal-styled log tail (`GET /v1/admin/connectors/jobs/{id}/log?after_id=`, cursor-based polling) that updates while the job is running and stops once it finishes.
+- **Audit**, **Entity Review**, **Engagements**, **Users**, **Kill Switch**, **Iceberg Exports** — UI over endpoints documented elsewhere in this README (`GET /v1/audit`, the entity-review queue, `/v1/admin/engagements`, `/v1/admin/users`, the kill switch, and the Iceberg export/receipts).
+- **Graph Browser** — a name search into the knowledge graph (`GET /v1/admin/graph/entities/search`, `/traverse`), rendered as a plain from/relation/to table.
+- **Coverage Gaps** — see [Adaptive intelligence](#adaptive-intelligence-opt-in) below.
+
+## Adaptive intelligence (opt-in)
+
+Three mechanisms that let the platform improve from real usage rather than only from code changes — all off by default, all computed/logged either way so an operator can see what they'd do before turning them on:
+
+- **Retrieval feedback loop** (`retrieval/feedback_signal.py`) — thumbs-up/down (`POST /v1/feedback`) aggregate into a bounded (±20%), confidence-dampened per-document trust score, refreshed periodically and applied to `retrieval/fusion.py`'s RRF ranking once `RETRIEVAL_FEEDBACK_APPLY_ENABLED=true`. A handful of votes can never zero out or double a document's rank — it's a nudge, not a filter.
+- **Entity-resolution active learning** (`graph/entity_resolution/splink_batch.py`) — once an entity type has enough admin/analyst merge decisions (`ENTITY_RESOLUTION_MIN_LABELS_FOR_TRAINING`, default 20), `ENTITY_RESOLUTION_TRAINING_ENABLED=true` trains that type's match weights from those real decisions (Splink's supervised `estimate_m_from_pairwise_labels`) instead of the fixed defaults `splink_batch.py` otherwise uses.
+- **Coverage-gap detection** — `GET /v1/audit/coverage-gaps` reports what fraction of each query `mode`'s answers came back `insufficient_evidence`, a signal for which source category might be missing. Deliberately mode-level only, not per-topic — question content stays out of this even for callers not using the encrypted conversation vault.
+
 ## Testing
 
 ```bash
 docker compose -f docker/docker-compose.yml run --rm api python -m pytest tests/unit -v
 ```
 
-55 unit tests cover chunking (offsets, overlap, the oversized-line hard-split path), RRF fusion, entity-resolution scoring/blocking/clustering, citation verification, quality gates, RBAC/ABAC, engagement target-scope matching and validity-window logic, API-key hashing, agent guardrails, and a schema-drift contract test against the report's data models.
+245 unit tests cover chunking (offsets, overlap, the oversized-line hard-split path), RRF fusion, entity-resolution scoring/blocking/clustering (plus a real Splink/DuckDB training run for the active-learning path — no Postgres needed for that part), citation verification, quality gates, RBAC/ABAC, engagement target-scope matching and validity-window logic, API-key hashing, agent guardrails, every connector's `parse()`/`discover()` logic, billing (mock-mode checkout/webhooks/donations), and a schema-drift contract test against the report's data models.
 
 Everything else in this README was verified **live** against real Postgres/Neo4j/MinIO during development — real ingestion end-to-end from every connector, hybrid retrieval producing sensible rankings, real knowledge-graph facts (e.g. `Chesky FOUNDED Airbnb`) correctly cited in `mode="auto"` answers, a real multi-step agent trajectory in `mode="research"`, and the full governance flow (auth → RBAC → revocation → kill switch → engagement scoping). See `git log` for the specifics of every bug found and fixed during that testing, phase by phase — commit messages document root cause and how each was verified fixed, not just what changed.
 
