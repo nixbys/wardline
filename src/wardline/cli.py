@@ -12,8 +12,10 @@ import json
 import typer
 
 from wardline.common.logging import configure_logging, get_logger
+from wardline.common.plans import PLANS
 from wardline.common.security import generate_api_key, lookup_key_for_index
 from wardline.storage.db import sync_session
+from wardline.storage.models.billing import STATUS_ACTIVE, Subscription
 from wardline.storage.models.governance import ROLE_ADMIN, ApiKey, User
 
 app = typer.Typer()
@@ -21,8 +23,25 @@ logger = get_logger(__name__)
 
 
 @app.command("create-admin-user")
-def create_admin_user(email: str) -> None:
+def create_admin_user(
+    email: str,
+    plan: str = typer.Option(
+        None,
+        "--plan",
+        help=(
+            "Activate a local Subscription at this plan for the new admin "
+            "(no Stripe involved -- for scripts/provision_customer.sh's dedicated-"
+            "instance customers, whose whole stack is their own: a Path A "
+            "Enterprise customer's own admin should not be capped at Free-tier "
+            "entitlements inside their own instance). Omit to leave the user on "
+            "the implicit free plan, unchanged from before this option existed."
+        ),
+    ),
+) -> None:
     """Create (or reuse) a user with the admin role and mint a fresh API key for them."""
+    if plan is not None and plan not in PLANS:
+        typer.echo(f"error: --plan must be one of {sorted(PLANS)}", err=True)
+        raise typer.Exit(code=1)
     with sync_session() as db:
         user = db.query(User).filter(User.email == email).first()
         if user is None:
@@ -37,9 +56,21 @@ def create_admin_user(email: str) -> None:
             scopes=["*"],
         )
         db.add(api_key)
+        if plan is not None:
+            sub = db.query(Subscription).filter(Subscription.user_id == user.id).first()
+            if sub is None:
+                sub = Subscription(user_id=user.id)
+                db.add(sub)
+            # No current_period_end -- a dedicated instance is contract-billed
+            # outside Stripe (see plans.py's Enterprise docstring), not on a
+            # renewing checkout cycle this field would otherwise track.
+            sub.plan = plan
+            sub.status = STATUS_ACTIVE
         db.flush()
         typer.echo(f"user_id={user.id}")
         typer.echo(f"api_key={plaintext}  (shown once — store it now)")
+        if plan is not None:
+            typer.echo(f"plan={plan}")
 
 
 @app.command("run-connector")
