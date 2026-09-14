@@ -41,6 +41,16 @@ def run_forever() -> None:
             export_audit_events,
             settings.iceberg_export_interval_seconds,
         )
+    from wardline.retrieval.feedback_signal import run_scheduled_trust_refresh
+
+    # Always registered, independent of retrieval_feedback_apply_enabled --
+    # the refresh always computes and logs, only *applying* the result to
+    # ranking is gated (see feedback_signal.py's docstring).
+    register_periodic(
+        "retrieval-feedback-refresh",
+        run_scheduled_trust_refresh,
+        settings.retrieval_feedback_refresh_interval_seconds,
+    )
     start_scheduler()
 
     from wardline.worker.jobs import claim_job_by_id, claim_next_job, run_job
