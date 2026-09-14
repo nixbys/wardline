@@ -1,0 +1,14 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "src/wardline/api/main.py": {
+      "maxDuration": 300
+    }
+  },
+  "crons": [
+    { "path": "/v1/cron/dispatch-jobs", "schedule": "0 2 * * *" },
+    { "path": "/v1/cron/entity-resolution", "schedule": "0 3 * * *" },
+    { "path": "/v1/cron/iceberg-export", "schedule": "0 4 * * *" },
+    { "path": "/v1/cron/feedback-refresh", "schedule": "0 5 * * *" }
+  ]
+}

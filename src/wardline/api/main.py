@@ -19,6 +19,7 @@ from wardline.api.routers import (
     audit,
     auth,
     billing,
+    cron,
     entity_review,
     feedback,
     globe,
@@ -113,6 +114,7 @@ def create_app() -> FastAPI:
     app.include_router(admin_billing.router)
     app.include_router(upload.router)
     app.include_router(globe.router)
+    app.include_router(cron.router)
     return app
 
 

@@ -90,11 +90,17 @@ packages = ["src/wardline"]
 # `app = ...`-shaped module it finds, including docker/toolrunner/app.py --
 # a deliberately internal, unauthenticated nmap-execution sidecar (see its
 # own docstring) that must never be the public entrypoint. The real API is
-# api/main.py's `app = create_app()`. See README's "Not yet built" section
-# and docker/Dockerfile.api before assuming a Vercel deploy is otherwise
-# complete -- this repo's real dependency closure (torch via
-# sentence-transformers/faster-whisper, spacy, ...) and its Postgres/Neo4j/
-# MinIO/worker topology don't fit a single stateless serverless function.
+# api/main.py's `app = create_app()`. A Vercel deploy needs more than just
+# this entrypoint fix to actually work end-to-end (managed Postgres/Neo4j,
+# api/routers/cron.py standing in for the persistent worker process, two
+# required Vercel project env vars for the CPU-only-torch bundle-size fix)
+# -- see docs/VERCEL_DEPLOYMENT.md. Deliberately NOT using [tool.uv.sources]/
+# [[tool.uv.index]] here -- verified directly against a real build log that
+# Vercel's Python builder calls `uv pip install .` (the pip-compatible
+# interface), which does not honor those project-mode-only TOML sections
+# (confirmed empirically: torch still resolved its default CUDA-bundled
+# wheel with them present). The env-var-based fix below is what actually
+# works against that real invocation.
 [tool.vercel]
 entrypoint = "src.wardline.api.main:app"
 
