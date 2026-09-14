@@ -9,8 +9,17 @@ docstring).
 
 from __future__ import annotations
 
+from datetime import UTC, datetime
+
+import pytest
+from fastapi import HTTPException
+from sqlalchemy import create_engine
+from sqlalchemy.orm import Session
+
 from wardline.api.routers import globe
 from wardline.common.config import Settings, get_settings
+from wardline.storage.models.base import Base
+from wardline.storage.models.documents import Document
 
 
 def _settings_with(**overrides) -> Settings:
@@ -78,3 +87,96 @@ async def test_realtime_session_503s_without_a_configured_key(monkeypatch):
     with pytest.raises(HTTPException) as exc_info:
         await globe.realtime_session.__wrapped__(request=None)
     assert exc_info.value.status_code == 503
+
+
+# --- GET /v1/globe/history -----------------------------------------------
+
+
+@pytest.fixture()
+def documents_db():
+    engine = create_engine("sqlite:///:memory:")
+    Base.metadata.create_all(engine, tables=[Document.__table__])
+    with Session(engine) as session:
+        yield session
+
+
+def _doc(connector: str, lat: float, lon: float, published_at: datetime, status: str = "active") -> Document:
+    return Document(
+        uri=f"{connector}://{lat}/{lon}",
+        title="t",
+        published_at=published_at,
+        license="us-gov-open-data",
+        content_hash="x" * 64,
+        source_connector=connector,
+        status=status,
+        extra={"latitude": lat, "longitude": lon},
+    )
+
+
+def test_history_rejects_a_connector_outside_the_allowlist():
+    with pytest.raises(HTTPException) as exc_info:
+        globe.globe_history.__wrapped__(
+            request=None,
+            connector="spiderfoot",  # internal-only -- must never be readable through this public route
+            start=datetime(2020, 1, 1, tzinfo=UTC),
+            end=datetime(2021, 1, 1, tzinfo=UTC),
+            limit=500,
+            db=None,
+        )
+    assert exc_info.value.status_code == 400
+
+
+def test_history_rejects_end_before_start():
+    with pytest.raises(HTTPException) as exc_info:
+        globe.globe_history.__wrapped__(
+            request=None,
+            connector="usgs_earthquakes",
+            start=datetime(2021, 1, 1, tzinfo=UTC),
+            end=datetime(2020, 1, 1, tzinfo=UTC),
+            limit=500,
+            db=None,
+        )
+    assert exc_info.value.status_code == 400
+
+
+def test_history_returns_only_the_requested_connector_and_range(documents_db):
+    db = documents_db
+    db.add_all(
+        [
+            _doc("usgs_earthquakes", 1.0, 2.0, datetime(2020, 6, 1, tzinfo=UTC)),
+            _doc("usgs_earthquakes", 3.0, 4.0, datetime(2023, 6, 1, tzinfo=UTC)),  # outside range
+            _doc("nasa_firms", 5.0, 6.0, datetime(2020, 6, 1, tzinfo=UTC)),  # wrong connector
+            _doc("usgs_earthquakes", 7.0, 8.0, datetime(2020, 7, 1, tzinfo=UTC), status="quarantined"),
+        ]
+    )
+    db.flush()
+
+    results = globe.globe_history.__wrapped__(
+        request=None,
+        connector="usgs_earthquakes",
+        start=datetime(2020, 1, 1, tzinfo=UTC),
+        end=datetime(2021, 1, 1, tzinfo=UTC),
+        limit=500,
+        db=db,
+    )
+
+    assert len(results) == 1
+    assert results[0]["latitude"] == 1.0
+    assert results[0]["longitude"] == 2.0
+
+
+def test_history_end_is_exclusive(documents_db):
+    db = documents_db
+    boundary = datetime(2021, 1, 1, tzinfo=UTC)
+    db.add(_doc("usgs_earthquakes", 1.0, 2.0, boundary))
+    db.flush()
+
+    results = globe.globe_history.__wrapped__(
+        request=None,
+        connector="usgs_earthquakes",
+        start=datetime(2020, 1, 1, tzinfo=UTC),
+        end=boundary,
+        limit=500,
+        db=db,
+    )
+    assert results == []

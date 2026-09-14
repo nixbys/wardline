@@ -71,4 +71,16 @@ export const GlobeApi = {
   createRealtimeSession() {
     return request("/v1/globe/realtime-session", { method: "POST" });
   },
+
+  /** GET /v1/globe/history -- discrete-event connectors only (usgs_earthquakes,
+   *  nasa_firms); start/end are Date objects, end is exclusive. */
+  getHistory({ connector, start, end, limit = 500 }) {
+    const qs = new URLSearchParams({
+      connector,
+      start: start.toISOString(),
+      end: end.toISOString(),
+      limit,
+    });
+    return request(`/v1/globe/history?${qs}`);
+  },
 };

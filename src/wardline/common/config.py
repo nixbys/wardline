@@ -342,6 +342,16 @@ class Settings(BaseSettings):
     entity_resolution_batch_enabled: bool = True
     entity_resolution_batch_interval_seconds: int = 21600  # 6 hours
 
+    # --- Retrieval feedback loop (retrieval/feedback_signal.py) ---
+    # Periodically aggregates Feedback ratings into a per-document trust
+    # multiplier. Computed and logged either way (so an operator can see
+    # what it would do); `retrieval_feedback_apply_enabled` gates whether
+    # retrieval/fusion.py actually applies it to ranking -- default off,
+    # a deliberate staged rollout until there's enough real Feedback
+    # volume to trust the signal (see this module's own docstring).
+    retrieval_feedback_refresh_interval_seconds: int = 21600  # 6 hours
+    retrieval_feedback_apply_enabled: bool = False
+
     # --- Observability ---
     otel_console_export: bool = True
     otel_exporter_otlp_endpoint: str | None = None
