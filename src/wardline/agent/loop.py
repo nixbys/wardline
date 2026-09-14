@@ -128,6 +128,7 @@ def run_agent(
         latency_ms=latency_ms,
         answer_hash=answer_hash,
         token_cost=budget.tokens_used,
+        insufficient_evidence=verified.insufficient_evidence,
     )
 
     return {

@@ -341,6 +341,14 @@ class Settings(BaseSettings):
     # complementing the synchronous per-mention resolver used at ingestion time.
     entity_resolution_batch_enabled: bool = True
     entity_resolution_batch_interval_seconds: int = 21600  # 6 hours
+    # Phase 5 (active learning from human review decisions, tracked
+    # locally) -- default off, and gated separately from the batch pass
+    # itself: training only ever *improves* m-probabilities for a type
+    # once enough real labeled decisions exist for it (see
+    # graph/entity_resolution/splink_batch.py's own docstring on why 20
+    # is a starting point, not a derived number).
+    entity_resolution_training_enabled: bool = False
+    entity_resolution_min_labels_for_training: int = 20
 
     # --- Retrieval feedback loop (retrieval/feedback_signal.py) ---
     # Periodically aggregates Feedback ratings into a per-document trust

@@ -2,11 +2,25 @@
 *before* it runs, and the result is appended to the same session when it
 finishes. Immutability is enforced at the database level — see
 migrations/versions/0001 and storage/models/governance.py.
+
+`coverage_gap_summary` (Phase 6 of a broader adaptive-intelligence
+initiative, tracked locally, not in this repo) is a deliberately
+conservative first cut at "the platform learns what it doesn't know
+well": grouped by `mode` and `insufficient_evidence` only, both
+non-sensitive pipeline metadata (part of `QueryRequest`/the pipeline's own
+behavior, never question content) that needs no vault-encryption carve-out
+the way a richer per-topic/per-entity-type breakdown would. That richer
+version was deliberately deferred as its own decision, not silently
+dropped -- see the roadmap doc's own note that "safe enough to persist
+from a plaintext question" deserves a narrow, deliberate definition rather
+than the broadest thing that would technically work.
 """
 
 from __future__ import annotations
 
-from sqlalchemy import select
+from datetime import datetime
+
+from sqlalchemy import select, text
 from sqlalchemy.orm import Session
 
 from wardline.common.errors import AccessDeniedError
@@ -55,6 +69,7 @@ def close_session(
     latency_ms: int,
     answer_hash: str,
     token_cost: int | None = None,
+    insufficient_evidence: bool = False,
 ) -> None:
     log_event(
         db,
@@ -66,6 +81,7 @@ def close_session(
             "latency_ms": latency_ms,
             "answer_hash": answer_hash,
             "token_cost": token_cost,
+            "insufficient_evidence": insufficient_evidence,
         },
     )
 
@@ -125,3 +141,39 @@ def get_events(
     if since:
         stmt = stmt.where(AuditEvent.created_at >= since)
     return list(db.execute(stmt).scalars())
+
+
+_COVERAGE_GAP_QUERY = """
+SELECT
+    opened.payload ->> 'mode' AS mode,
+    COUNT(*) AS total,
+    COUNT(*) FILTER (
+        WHERE (closed.payload ->> 'insufficient_evidence')::boolean IS TRUE
+    ) AS insufficient
+FROM audit_events opened
+JOIN audit_events closed
+    ON closed.session_id = opened.session_id AND closed.event_type = 'query_closed'
+WHERE opened.event_type = 'query_opened'
+    AND (CAST(:since AS timestamptz) IS NULL OR opened.created_at >= CAST(:since AS timestamptz))
+GROUP BY mode
+ORDER BY mode
+"""
+
+
+def coverage_gap_summary(db: Session, since: datetime | None = None) -> list[dict]:
+    """How often each query mode ends without enough evidence to answer --
+    see this module's own docstring for why this stays mode-level rather
+    than topic-level. Surfaced to admins/analysts via
+    `GET /v1/audit/coverage-gaps` -- a signal for which connector category
+    might close a gap, not an automated action.
+    """
+    rows = db.execute(text(_COVERAGE_GAP_QUERY), {"since": since}).fetchall()
+    return [
+        {
+            "mode": row[0],
+            "total": row[1],
+            "insufficient_evidence_count": row[2],
+            "insufficient_evidence_rate": (row[2] / row[1]) if row[1] else 0.0,
+        }
+        for row in rows
+    ]

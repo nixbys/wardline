@@ -237,6 +237,11 @@
       return request(`/v1/audit${qs ? `?${qs}` : ""}`);
     },
 
+    /** GET /v1/audit/coverage-gaps — admin/analyst only; mode-level insufficient_evidence rates */
+    getCoverageGaps() {
+      return request("/v1/audit/coverage-gaps");
+    },
+
     /** GET /v1/orgs/me — the caller's org, or null if they don't have one */
     getMyOrg() {
       return request("/v1/orgs/me");
