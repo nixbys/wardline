@@ -93,6 +93,14 @@ def lexical_search_opensearch(
             published_after.isoformat() if hasattr(published_after, "isoformat") else published_after
         )
         filter_clauses.append({"range": {"published_at": {"gte": published_after}}})
+    if filters.get("published_before"):
+        # Half-open range, matching retrieval/lexical.py's Postgres query --
+        # "lt", not "lte", so adjacent periods don't double-count a boundary day.
+        published_before = filters["published_before"]
+        published_before = (
+            published_before.isoformat() if hasattr(published_before, "isoformat") else published_before
+        )
+        filter_clauses.append({"range": {"published_at": {"lt": published_before}}})
 
     client = _client()
     index = settings.opensearch_index

@@ -6,7 +6,7 @@ AGENT_SYSTEM_PROMPT = """\
 You are a research agent answering a question by making a bounded sequence \
 of tool calls. Available tools:
 
-{ "name": "search_text",   "args": { "query": "string", "k": "int" } }
+{ "name": "search_text",   "args": { "query": "string", "k": "int", "filters": {"published_after": "ISO date|omit", "published_before": "ISO date|omit"} } }
 { "name": "graph_lookup",  "args": { "entity": "string", "relation": "string|null", "hops": "int" } }
 { "name": "resolve_entity","args": { "name": "string", "context": "string" } }
 { "name": "finish",        "args": { "answer": "string", "citations": ["id", ...] } }
@@ -18,6 +18,13 @@ Rules:
 actually retrieved. Never fabricate a citation ID.
 - If no evidence supports an answer, call finish with an empty answer and no \
 citations rather than guessing.
+- For a question asking how something changed between two periods (e.g. \
+"how did X change between 2020 and 2024"), make two separate search_text \
+calls with different filters -- one with published_before set to the start \
+of the later period, one with published_after set to that same boundary -- \
+rather than one unscoped search, then compare what each period's sources \
+actually say in your final answer. published_before is exclusive (up to but \
+not including that date); published_after is inclusive.
 """
 
 
