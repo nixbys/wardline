@@ -31,6 +31,14 @@ class DonateRequest(BaseModel):
     message: str | None = Field(default=None, max_length=500)
 
 
+class EnterpriseInquiryRequest(BaseModel):
+    company: str = Field(min_length=1, max_length=255)
+    contact_email: str = Field(min_length=3, max_length=320)
+    contact_name: str | None = Field(default=None, max_length=255)
+    seats_estimate: int | None = Field(default=None, gt=0)
+    message: str | None = Field(default=None, max_length=2000)
+
+
 @router.get("/plans")
 def list_plans() -> list[dict]:
     return public_plan_list()
@@ -84,6 +92,26 @@ def donate(request: Request, body: DonateRequest, db: Session = Depends(get_db))
     except AccessDeniedError as exc:
         raise HTTPException(status_code=400, detail=str(exc)) from exc
     return {"checkout_url": url}
+
+
+@router.post("/enterprise-inquiry")
+@limiter.limit(f"{get_settings().rate_limit_enterprise_inquiry_per_minute}/minute")
+def enterprise_inquiry(request: Request, body: EnterpriseInquiryRequest, db: Session = Depends(get_db)) -> dict:
+    """Public, no account required -- see pricing.html's Enterprise card
+    ("Talk to sales") and governance/billing.submit_enterprise_lead's
+    docstring for why this doesn't go through Stripe Checkout at all."""
+    try:
+        lead = billing.submit_enterprise_lead(
+            db,
+            company=body.company,
+            contact_email=body.contact_email,
+            contact_name=body.contact_name,
+            message=body.message,
+            seats_estimate=body.seats_estimate,
+        )
+    except AccessDeniedError as exc:
+        raise HTTPException(status_code=400, detail=str(exc)) from exc
+    return {"received": True, "lead_id": lead.id}
 
 
 @router.post("/webhook")

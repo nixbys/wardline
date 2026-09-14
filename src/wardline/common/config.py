@@ -291,6 +291,14 @@ class Settings(BaseSettings):
     # requires an account) -- same "public + cost-triggering needs a cap"
     # reasoning as rate_limit_auth_per_minute, whose default this mirrors.
     rate_limit_donate_per_minute: int = 10
+    # POST /v1/billing/enterprise-inquiry ("Talk to sales" on pricing.html)
+    # is also public/unauthenticated -- same rate-limit reasoning as
+    # donate above. Notification goes through common/email.py's existing
+    # mock/live convention, so it's fully exercisable with no real inbox
+    # configured; leave unset to just persist the lead without emailing
+    # anyone (an admin/analyst still sees it in the Ops Console).
+    sales_notification_email: str | None = None
+    rate_limit_enterprise_inquiry_per_minute: int = 5
 
     # --- Auth mode: bearer API keys (default) or OIDC JWT bearer tokens ---
     # "api_key" is this project's own key system (governance/*, storage/models/governance.py).

@@ -80,6 +80,7 @@
     iceberg: loadIceberg,
     graph: () => {}, // search-driven, nothing to load on entry
     coverage: loadCoverageGaps,
+    "enterprise-leads": loadEnterpriseLeads,
   };
 
   function loadPanel(name) {
@@ -463,6 +464,52 @@
         .join("")}</tbody>`;
   }
   document.getElementById("coverageRefreshBtn").addEventListener("click", loadCoverageGaps);
+
+  // --- Enterprise leads ---------------------------------------------------------
+
+  const LEAD_STATUSES = ["new", "contacted", "provisioned", "closed"];
+
+  async function loadEnterpriseLeads() {
+    let leads;
+    try {
+      leads = await WardlineApi.listEnterpriseLeads();
+    } catch (err) {
+      toast(err.message, "danger");
+      return;
+    }
+    const table = document.getElementById("enterpriseLeadsTable");
+    table.innerHTML = `
+      <thead><tr><th>Company</th><th>Contact</th><th>Seats</th><th>Message</th><th>Received</th><th>Status</th></tr></thead>
+      <tbody>${leads
+        .map(
+          (lead) => `
+        <tr>
+          <td>${esc(lead.company)}</td>
+          <td>${esc(lead.contact_name || "")} &lt;${esc(lead.contact_email)}&gt;</td>
+          <td>${esc(lead.seats_estimate ?? "")}</td>
+          <td>${esc(lead.message || "")}</td>
+          <td>${esc(new Date(lead.created_at).toLocaleString())}</td>
+          <td>
+            <select class="input" data-lead-id="${esc(lead.id)}">
+              ${LEAD_STATUSES.map((s) => `<option value="${s}" ${s === lead.status ? "selected" : ""}>${s}</option>`).join("")}
+            </select>
+          </td>
+        </tr>`
+        )
+        .join("")}</tbody>`;
+    table.querySelectorAll("[data-lead-id]").forEach((select) => {
+      select.addEventListener("change", async () => {
+        try {
+          await WardlineApi.updateEnterpriseLeadStatus({ leadId: select.dataset.leadId, status: select.value });
+          toast(`Marked ${select.value}`);
+        } catch (err) {
+          toast(err.message, "danger");
+          loadEnterpriseLeads(); // revert the dropdown to the real server state
+        }
+      });
+    });
+  }
+  document.getElementById("enterpriseLeadsRefreshBtn").addEventListener("click", loadEnterpriseLeads);
 
   checkAccess();
 })();

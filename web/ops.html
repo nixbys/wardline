@@ -33,6 +33,7 @@
           <button class="ops-nav__item" data-panel="iceberg" type="button">Iceberg Exports</button>
           <button class="ops-nav__item" data-panel="graph" type="button">Graph Browser</button>
           <button class="ops-nav__item" data-panel="coverage" type="button">Coverage Gaps</button>
+          <button class="ops-nav__item" data-panel="enterprise-leads" type="button">Enterprise Leads</button>
         </nav>
 
         <div class="sidebar__footer">
@@ -176,6 +177,19 @@
               a signal for which connector category might close a gap, not an automated action.
             </p>
             <div class="ops-table-wrap"><table class="ops-table" id="coverageTable"></table></div>
+          </section>
+
+          <!-- Enterprise Leads -->
+          <section class="ops-panel" id="panel-enterprise-leads" data-panel="enterprise-leads" hidden>
+            <div class="ops-panel__head">
+              <h2>Enterprise leads</h2>
+              <button class="btn btn--secondary btn--sm" id="enterpriseLeadsRefreshBtn" type="button">Refresh</button>
+            </div>
+            <p class="field__hint">
+              "Talk to sales" submissions from pricing.html's Enterprise card. Move a lead to
+              "provisioned" once its dedicated instance is up (scripts/provision_customer.sh).
+            </p>
+            <div class="ops-table-wrap"><table class="ops-table" id="enterpriseLeadsTable"></table></div>
           </section>
         </div>
       </div>

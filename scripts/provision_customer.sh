@@ -1,9 +1,13 @@
 #!/usr/bin/env bash
 # Stands up a dedicated docker-compose stack for one Path A customer
-# (docs/COMMERCIALIZATION_ROADMAP.md's "every customer gets their own
-# deployment" model) -- the scripted counterpart to the manual `cp
-# .env.example .env; scripts/generate_secrets.sh; docker compose up -d;
-# ...` sequence in README's Setup section.
+# (per internal planning notes' "every customer gets their own deployment"
+# model) -- the scripted counterpart to the manual `cp .env.example .env;
+# scripts/generate_secrets.sh; docker compose up -d; ...` sequence in
+# README's Setup section. This is the Enterprise plan's fulfillment path
+# (plans.py: Enterprise is "dedicated instance / contract", not self-serve
+# checkout) -- the admin user this script creates is activated on that
+# plan locally (see the create-admin-user --plan call below) so they
+# aren't capped at Free-tier entitlements inside their own instance.
 #
 # usage: scripts/provision_customer.sh <slug> <domain> --admin-email <email>
 #          [--extra-env KEY=VALUE ...] [--profile NAME ...]
@@ -131,8 +135,8 @@ fi
 echo "==> Running migrations (belt-and-suspenders: the migrator service already ran once)"
 $COMPOSE run --rm api python -m alembic upgrade head
 
-echo "==> Creating the first admin user"
-ADMIN_OUTPUT=$($COMPOSE run --rm api python -m wardline.cli create-admin-user "$ADMIN_EMAIL")
+echo "==> Creating the first admin user (Enterprise plan, this instance is theirs alone)"
+ADMIN_OUTPUT=$($COMPOSE run --rm api python -m wardline.cli create-admin-user "$ADMIN_EMAIL" --plan enterprise)
 echo "$ADMIN_OUTPUT" | grep -v '^api_key='
 KEY_FILE="${DIR}/admin-api-key.txt"
 # cli.py's create-admin-user prints "api_key=<key>  (shown once...)" -- the

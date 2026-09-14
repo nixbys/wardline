@@ -21,14 +21,17 @@ from datetime import UTC, datetime, timedelta
 from sqlalchemy.orm import Session
 
 from wardline.common.config import get_settings
-from wardline.common.errors import AccessDeniedError
+from wardline.common.email import send_email
+from wardline.common.errors import AccessDeniedError, NotFoundError
 from wardline.common.plans import PRO, TEAM, get_plan
 from wardline.storage.models.billing import (
+    LEAD_STATUSES,
     STATUS_ACTIVE,
     STATUS_CANCELED,
     STATUS_INCOMPLETE,
     STATUS_PAST_DUE,
     Donation,
+    EnterpriseLead,
     Subscription,
 )
 from wardline.storage.models.governance import User
@@ -354,3 +357,78 @@ def handle_webhook_event(db: Session, event: dict) -> None:
         sub.status = STATUS_CANCELED
         sub.plan = "free"
         db.flush()
+
+
+_MAX_SEATS_ESTIMATE = 100_000  # sanity ceiling, not a real business limit -- mirrors donation's cap
+
+
+def submit_enterprise_lead(
+    db: Session,
+    *,
+    company: str,
+    contact_email: str,
+    contact_name: str | None = None,
+    message: str | None = None,
+    seats_estimate: int | None = None,
+) -> EnterpriseLead:
+    """The Enterprise plan is deliberately not self-serve checkout
+    (`plans.get_plan("enterprise").self_serve_checkout is False` --
+    "dedicated instance / contract", see `plans.py`) -- this is the entry
+    point into that path instead of a Stripe Checkout session. Persists
+    the lead unconditionally (an admin/analyst can always find it in the
+    Ops Console even if the notification below never lands), then makes a
+    best-effort attempt to notify whoever's on point for sales.
+
+    Deliberately takes no `user`/`Session`-bound caller, same reasoning as
+    `create_donation_checkout_session`: inquiring never requires a
+    wardline account.
+    """
+    if seats_estimate is not None and not (0 < seats_estimate <= _MAX_SEATS_ESTIMATE):
+        raise AccessDeniedError(f"seats_estimate must be between 1 and {_MAX_SEATS_ESTIMATE:,}")
+
+    lead = EnterpriseLead(
+        company=company,
+        contact_name=contact_name,
+        contact_email=contact_email,
+        seats_estimate=seats_estimate,
+        message=message,
+    )
+    db.add(lead)
+    db.flush()
+
+    settings = get_settings()
+    if settings.sales_notification_email:
+        body_lines = [
+            f"Company: {company}",
+            f"Contact: {contact_name or '(not given)'} <{contact_email}>",
+            f"Seats estimate: {seats_estimate if seats_estimate is not None else '(not given)'}",
+            f"Message: {message or '(none)'}",
+            f"Lead id: {lead.id}",
+        ]
+        # send_email itself handles the mock/live convention (common/email.py)
+        # -- this call is unconditional and works the same in dev/CI as in
+        # production, logging instead of sending when EMAIL_MODE=mock.
+        send_email(
+            to=settings.sales_notification_email,
+            subject=f"New Enterprise inquiry: {company}",
+            body="\n".join(body_lines),
+        )
+    return lead
+
+
+def list_enterprise_leads(db: Session, *, status: str | None = None) -> list[EnterpriseLead]:
+    query = db.query(EnterpriseLead)
+    if status is not None:
+        query = query.filter(EnterpriseLead.status == status)
+    return query.order_by(EnterpriseLead.created_at.desc()).all()
+
+
+def update_enterprise_lead_status(db: Session, lead_id: str, *, status: str) -> EnterpriseLead:
+    if status not in LEAD_STATUSES:
+        raise AccessDeniedError(f"status must be one of {LEAD_STATUSES}")
+    lead = db.get(EnterpriseLead, lead_id)
+    if lead is None:
+        raise NotFoundError(f"no enterprise lead with id {lead_id!r}")
+    lead.status = status
+    db.flush()
+    return lead

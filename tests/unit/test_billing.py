@@ -11,13 +11,27 @@ import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import Session
 
-from wardline.common.errors import AccessDeniedError
+from wardline.common.config import Settings, get_settings
+from wardline.common.errors import AccessDeniedError, NotFoundError
 from wardline.common.plans import ENTERPRISE, FREE, PRO, TEAM, get_plan, public_plan_list
 from wardline.governance import billing, entitlements, orgs
 from wardline.storage.models.base import Base
-from wardline.storage.models.billing import STATUS_ACTIVE, STATUS_CANCELED, Donation, Subscription
+from wardline.storage.models.billing import (
+    LEAD_STATUS_CONTACTED,
+    LEAD_STATUS_NEW,
+    STATUS_ACTIVE,
+    STATUS_CANCELED,
+    Donation,
+    EnterpriseLead,
+    Subscription,
+)
 from wardline.storage.models.governance import User
 from wardline.storage.models.orgs import Organization
+
+
+def _settings_with(**overrides) -> Settings:
+    base = get_settings()
+    return Settings(**{**base.model_dump(), **overrides})
 
 
 @pytest.fixture()
@@ -25,7 +39,13 @@ def db():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(
         engine,
-        tables=[User.__table__, Subscription.__table__, Organization.__table__, Donation.__table__],
+        tables=[
+            User.__table__,
+            Subscription.__table__,
+            Organization.__table__,
+            Donation.__table__,
+            EnterpriseLead.__table__,
+        ],
     )
     with Session(engine) as session:
         yield session
@@ -339,3 +359,71 @@ def test_webhook_checkout_completed_with_org_id_reuses_owners_existing_row(db, u
     assert sub is not None
     assert sub.plan == TEAM
     assert db.query(Subscription).filter(Subscription.user_id == user.id).count() == 1
+
+
+# --- governance/billing.py enterprise leads (pricing.html's "Talk to
+# sales" -- Enterprise is contract-billed, not a Stripe Checkout flow) --
+
+
+def test_submit_enterprise_lead_persists_unconditionally(db):
+    lead = billing.submit_enterprise_lead(
+        db, company="Acme Inc", contact_email="ceo@acme.example", contact_name="Jane", seats_estimate=50
+    )
+    assert lead.status == LEAD_STATUS_NEW
+    assert db.query(EnterpriseLead).one().company == "Acme Inc"
+
+
+def test_submit_enterprise_lead_rejects_bad_seats_estimate(db):
+    with pytest.raises(AccessDeniedError, match="seats_estimate"):
+        billing.submit_enterprise_lead(db, company="Acme Inc", contact_email="ceo@acme.example", seats_estimate=0)
+
+
+def test_submit_enterprise_lead_never_touches_subscription_state(db, user):
+    billing.submit_enterprise_lead(db, company="Acme Inc", contact_email="ceo@acme.example")
+    assert billing.get_subscription(db, user) is None
+    assert billing.current_plan_id(db, user) == FREE
+
+
+def test_submit_enterprise_lead_sends_no_email_when_unconfigured(db, monkeypatch):
+    # Default settings leave sales_notification_email unset -- must not
+    # even attempt to call send_email in that case.
+    called = []
+    monkeypatch.setattr(billing, "send_email", lambda **kwargs: called.append(kwargs))
+    billing.submit_enterprise_lead(db, company="Acme Inc", contact_email="ceo@acme.example")
+    assert called == []
+
+
+def test_submit_enterprise_lead_notifies_sales_when_configured(db, monkeypatch):
+    monkeypatch.setattr(
+        billing, "get_settings", lambda: _settings_with(sales_notification_email="sales@wardline.example")
+    )
+    called = []
+    monkeypatch.setattr(billing, "send_email", lambda **kwargs: called.append(kwargs))
+    lead = billing.submit_enterprise_lead(db, company="Acme Inc", contact_email="ceo@acme.example")
+    assert len(called) == 1
+    assert called[0]["to"] == "sales@wardline.example"
+    assert "Acme Inc" in called[0]["body"]
+    assert lead.id in called[0]["body"]
+
+
+def test_list_enterprise_leads_orders_newest_first_and_filters_by_status(db):
+    first = billing.submit_enterprise_lead(db, company="Old Co", contact_email="a@old.example")
+    second = billing.submit_enterprise_lead(db, company="New Co", contact_email="a@new.example")
+    billing.update_enterprise_lead_status(db, first.id, status=LEAD_STATUS_CONTACTED)
+
+    all_leads = billing.list_enterprise_leads(db)
+    assert [lead.id for lead in all_leads] == [second.id, first.id]
+
+    contacted = billing.list_enterprise_leads(db, status=LEAD_STATUS_CONTACTED)
+    assert [lead.id for lead in contacted] == [first.id]
+
+
+def test_update_enterprise_lead_status_rejects_unknown_status(db):
+    lead = billing.submit_enterprise_lead(db, company="Acme Inc", contact_email="ceo@acme.example")
+    with pytest.raises(AccessDeniedError, match="status must be one of"):
+        billing.update_enterprise_lead_status(db, lead.id, status="not-a-real-status")
+
+
+def test_update_enterprise_lead_status_rejects_unknown_lead(db):
+    with pytest.raises(NotFoundError, match="no enterprise lead"):
+        billing.update_enterprise_lead_status(db, "lead_doesnotexist", status=LEAD_STATUS_CONTACTED)

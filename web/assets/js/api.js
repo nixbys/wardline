@@ -198,6 +198,22 @@
       });
     },
 
+    /** POST /v1/billing/enterprise-inquiry — public, no account needed;
+     *  body: { company, contact_email, contact_name?, seats_estimate?, message? };
+     *  returns { received, lead_id } */
+    enterpriseInquiry({ company, contactEmail, contactName, seatsEstimate, message }) {
+      return request("/v1/billing/enterprise-inquiry", {
+        method: "POST",
+        body: {
+          company,
+          contact_email: contactEmail,
+          contact_name: contactName || null,
+          seats_estimate: seatsEstimate || null,
+          message: message || null,
+        },
+      });
+    },
+
     /** POST /v1/query — body: { question, mode, filters, max_sources } */
     query({ question, mode = "auto", filters = {}, max_sources = 12 }) {
       return request("/v1/query", {
@@ -368,6 +384,20 @@
     /** GET /v1/admin/graph/entities/{id}/traverse?hops= */
     traverseEntity({ entityId, hops = 1 }) {
       return request(`/v1/admin/graph/entities/${encodeURIComponent(entityId)}/traverse?hops=${hops}`);
+    },
+
+    /** GET /v1/admin/billing/enterprise-leads?status= */
+    listEnterpriseLeads({ status } = {}) {
+      const qs = status ? `?status=${encodeURIComponent(status)}` : "";
+      return request(`/v1/admin/billing/enterprise-leads${qs}`);
+    },
+
+    /** POST /v1/admin/billing/enterprise-leads/{id}/status — body: { status } */
+    updateEnterpriseLeadStatus({ leadId, status }) {
+      return request(`/v1/admin/billing/enterprise-leads/${encodeURIComponent(leadId)}/status`, {
+        method: "POST",
+        body: { status },
+      });
     },
   };
 
