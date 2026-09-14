@@ -3,7 +3,7 @@ autogenerate and for `Base.metadata.create_all()` in tests.
 """
 
 from wardline.storage.models.base import Base
-from wardline.storage.models.billing import Donation, Subscription
+from wardline.storage.models.billing import Donation, EnterpriseLead, Subscription
 from wardline.storage.models.chunks import Chunk
 from wardline.storage.models.documents import Document
 from wardline.storage.models.edges import Edge
@@ -39,6 +39,7 @@ __all__ = [
     "Edge",
     "EdgeCandidate",
     "Engagement",
+    "EnterpriseLead",
     "Entity",
     "EntityMention",
     "EntityResolutionReview",

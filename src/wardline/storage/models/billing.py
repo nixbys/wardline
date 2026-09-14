@@ -66,3 +66,36 @@ class Donation(Base, TimestampMixin):
     currency: Mapped[str] = mapped_column(String(8), default="usd")
     message: Mapped[str | None] = mapped_column(String(500), nullable=True)
     stripe_checkout_session_id: Mapped[str | None] = mapped_column(String(128), nullable=True)
+
+
+LEAD_STATUS_NEW = "new"
+LEAD_STATUS_CONTACTED = "contacted"
+LEAD_STATUS_PROVISIONED = "provisioned"
+LEAD_STATUS_CLOSED = "closed"
+LEAD_STATUSES = (LEAD_STATUS_NEW, LEAD_STATUS_CONTACTED, LEAD_STATUS_PROVISIONED, LEAD_STATUS_CLOSED)
+
+
+class EnterpriseLead(Base, TimestampMixin):
+    """A "Talk to sales" submission from pricing.html's Enterprise card.
+    Enterprise is deliberately not self-serve checkout (`plans.py`'s
+    `self_serve_checkout=False`, "dedicated instance / contract") -- this
+    is the entry point into that path instead: capture the inquiry, notify
+    whoever's on point for sales (`governance.billing.submit_enterprise_lead`),
+    and let an admin/analyst track it to a provisioned instance
+    (`scripts/provision_customer.sh`) from the Ops Console.
+
+    No relation to `Subscription`/Stripe -- Enterprise is contract-billed
+    outside that plumbing, same reason `Donation` is deliberately
+    unrelated to it. `status` is a plain operator-tracked pipeline stage,
+    not a state machine anything else in this codebase reacts to.
+    """
+
+    __tablename__ = "enterprise_leads"
+
+    id: Mapped[str] = mapped_column(String(64), primary_key=True, default=partial(new_id, "lead"))
+    company: Mapped[str] = mapped_column(String(255), nullable=False)
+    contact_name: Mapped[str | None] = mapped_column(String(255), nullable=True)
+    contact_email: Mapped[str] = mapped_column(String(320), nullable=False)
+    seats_estimate: Mapped[int | None] = mapped_column(Integer, nullable=True)
+    message: Mapped[str | None] = mapped_column(String(2000), nullable=True)
+    status: Mapped[str] = mapped_column(String(16), default=LEAD_STATUS_NEW)

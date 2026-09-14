@@ -1,8 +1,7 @@
 """Unit coverage for query/understanding.py -- the regex-heuristic date
 constraint extraction that backs Phase 1/2 of temporal-comparison research
-questions (see ADAPTIVE_INTELLIGENCE_ROADMAP.md, kept locally). Every
-`published_before` here is exclusive -- see retrieval/lexical.py's
-matching half-open-range comment.
+questions (tracked internally). Every `published_before` here is
+exclusive -- see retrieval/lexical.py's matching half-open-range comment.
 """
 
 from __future__ import annotations
