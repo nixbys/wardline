@@ -144,6 +144,7 @@ def answer(
         retrieved=[s["id"] for s in sources_payload],
         latency_ms=latency_ms,
         answer_hash=answer_hash,
+        insufficient_evidence=verified.insufficient_evidence,
     )
 
     return {

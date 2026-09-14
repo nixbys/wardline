@@ -79,6 +79,7 @@
     "kill-switch": loadKillSwitch,
     iceberg: loadIceberg,
     graph: () => {}, // search-driven, nothing to load on entry
+    coverage: loadCoverageGaps,
   };
 
   function loadPanel(name) {
@@ -442,6 +443,26 @@
           .join("")}</tbody>
       </table></div>`;
   });
+
+  // --- Coverage gaps -----------------------------------------------------------
+
+  async function loadCoverageGaps() {
+    let rows;
+    try {
+      rows = await WardlineApi.getCoverageGaps();
+    } catch (err) {
+      toast(err.message, "danger");
+      return;
+    }
+    document.getElementById("coverageTable").innerHTML = `
+      <thead><tr><th>Mode</th><th>Total</th><th>Insufficient evidence</th><th>Rate</th></tr></thead>
+      <tbody>${rows
+        .map(
+          (r) => `<tr><td>${esc(r.mode)}</td><td>${esc(r.total)}</td><td>${esc(r.insufficient_evidence_count)}</td><td>${(r.insufficient_evidence_rate * 100).toFixed(1)}%</td></tr>`
+        )
+        .join("")}</tbody>`;
+  }
+  document.getElementById("coverageRefreshBtn").addEventListener("click", loadCoverageGaps);
 
   checkAccess();
 })();

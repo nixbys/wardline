@@ -18,7 +18,19 @@ REVIEW_THRESHOLD = 0.75
 
 
 def queue_for_review(db: Session, entity_a_id: str, entity_b_id: str, score: float) -> EntityResolutionReview:
-    review = EntityResolutionReview(entity_a_id=entity_a_id, entity_b_id=entity_b_id, score=score)
+    # Snapshotted now, while both entities are still guaranteed to exist --
+    # see EntityResolutionReview's own docstring on why entity_b in
+    # particular won't be there anymore once a "merged" decision runs.
+    entity_a = db.get(Entity, entity_a_id)
+    entity_b = db.get(Entity, entity_b_id)
+    review = EntityResolutionReview(
+        entity_a_id=entity_a_id,
+        entity_b_id=entity_b_id,
+        entity_a_name=entity_a.canonical_name if entity_a else None,
+        entity_b_name=entity_b.canonical_name if entity_b else None,
+        entity_type=entity_a.type if entity_a else (entity_b.type if entity_b else None),
+        score=score,
+    )
     db.add(review)
     db.flush()
     return review
