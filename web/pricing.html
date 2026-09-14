@@ -49,6 +49,39 @@
       </div>
 
       <div class="banner" id="pricingStatus" hidden style="max-width:480px; margin:2rem auto 0;"></div>
+
+      <div class="card card--pad" id="enterpriseInquiry" hidden style="max-width:420px; margin:2rem auto 0;">
+        <h3 style="margin-top:0;">Talk to sales</h3>
+        <p class="field__hint">
+          Enterprise is a dedicated instance (self-hosted or hosted by us), contract-billed --
+          tell us about your use case and we'll follow up.
+        </p>
+
+        <div class="field">
+          <label class="field__label" for="enterpriseCompany">Company</label>
+          <input class="input" id="enterpriseCompany" type="text" maxlength="255" required />
+        </div>
+        <div class="field">
+          <label class="field__label" for="enterpriseContactName">Your name (optional)</label>
+          <input class="input" id="enterpriseContactName" type="text" maxlength="255" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="enterpriseContactEmail">Work email</label>
+          <input class="input" id="enterpriseContactEmail" type="email" maxlength="320" required />
+        </div>
+        <div class="field">
+          <label class="field__label" for="enterpriseSeats">Estimated seats (optional)</label>
+          <input class="input" id="enterpriseSeats" type="number" min="1" step="1" />
+        </div>
+        <div class="field">
+          <label class="field__label" for="enterpriseMessage">What are you looking to do? (optional)</label>
+          <input class="input" id="enterpriseMessage" type="text" maxlength="2000" />
+        </div>
+
+        <button class="btn btn--primary btn--block" id="enterpriseSubmit" type="button">Send inquiry</button>
+
+        <div class="banner" id="enterpriseStatus" hidden style="margin-top:1rem;"></div>
+      </div>
     </main>
 
     <footer class="footer">
@@ -66,7 +99,7 @@
           </div>
           <div class="footer__col">
             <strong>Enterprise</strong>
-            <a href="mailto:sales@wardline.example">Talk to sales</a>
+            <a href="#enterpriseInquiry" data-enterprise-inquiry>Talk to sales</a>
           </div>
           <div class="footer__col">
             <strong>Community</strong>

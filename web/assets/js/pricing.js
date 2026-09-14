@@ -62,7 +62,7 @@
         } else if (!plan.self_serve_checkout) {
           action = plan.id === "free"
             ? `<a class="btn btn--secondary btn--block" href="login.html">Get started</a>`
-            : `<a class="btn btn--secondary btn--block" href="mailto:sales@wardline.example">Talk to sales</a>`;
+            : `<a class="btn btn--secondary btn--block" href="#enterpriseInquiry" data-enterprise-inquiry>Talk to sales</a>`;
         } else {
           action = `<button class="btn btn--primary btn--block" data-plan="${plan.id}">Subscribe</button>`;
         }
@@ -99,6 +99,78 @@
       status.className = "banner banner--danger";
       status.textContent = err.message;
     }
+  }
+
+  // --- Enterprise "Talk to sales" inquiry -----------------------------
+  // Delegated on document (not `grid`) so it covers both the dynamically
+  // rendered plan-card CTA and the static footer link without separate
+  // rebinding logic each render() call.
+  const enterpriseForm = document.getElementById("enterpriseInquiry");
+  const enterpriseStatus = document.getElementById("enterpriseStatus");
+  const enterpriseSubmit = document.getElementById("enterpriseSubmit");
+
+  function showEnterpriseForm() {
+    enterpriseForm.hidden = false;
+    enterpriseForm.scrollIntoView({ behavior: "smooth", block: "center" });
+  }
+
+  document.addEventListener("click", (event) => {
+    const trigger = event.target.closest("[data-enterprise-inquiry]");
+    if (!trigger) return;
+    event.preventDefault();
+    showEnterpriseForm();
+  });
+
+  if (enterpriseSubmit) {
+    enterpriseSubmit.addEventListener("click", async () => {
+      const company = document.getElementById("enterpriseCompany").value.trim();
+      const contactEmail = document.getElementById("enterpriseContactEmail").value.trim();
+      const contactName = document.getElementById("enterpriseContactName").value.trim();
+      const seatsRaw = document.getElementById("enterpriseSeats").value;
+      const message = document.getElementById("enterpriseMessage").value.trim();
+
+      enterpriseStatus.hidden = true;
+      if (!company || !contactEmail) {
+        enterpriseStatus.hidden = false;
+        enterpriseStatus.className = "banner banner--danger";
+        enterpriseStatus.textContent = "Company and work email are required.";
+        return;
+      }
+
+      enterpriseSubmit.disabled = true;
+      try {
+        await WardlineApi.enterpriseInquiry({
+          company,
+          contactEmail,
+          contactName,
+          seatsEstimate: seatsRaw ? Number(seatsRaw) : null,
+          message,
+        });
+        enterpriseStatus.hidden = false;
+        enterpriseStatus.className = "banner banner--accent";
+        enterpriseStatus.textContent = "Thanks -- we'll follow up at that email shortly.";
+        [
+          "enterpriseCompany",
+          "enterpriseContactName",
+          "enterpriseContactEmail",
+          "enterpriseSeats",
+          "enterpriseMessage",
+        ].forEach((id) => (document.getElementById(id).value = ""));
+      } catch (err) {
+        enterpriseStatus.hidden = false;
+        enterpriseStatus.className = "banner banner--danger";
+        enterpriseStatus.textContent = err.message;
+      } finally {
+        enterpriseSubmit.disabled = false;
+      }
+    });
+  }
+
+  // Arriving from donate.html's footer link (no Enterprise CTA on that
+  // page) with ?talk-to-sales=1 opens the form immediately instead of
+  // requiring a second click once the plan grid has rendered.
+  if (new URLSearchParams(window.location.search).get("talk-to-sales") === "1") {
+    showEnterpriseForm();
   }
 
   render();
