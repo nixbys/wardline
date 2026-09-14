@@ -32,6 +32,7 @@
           <button class="ops-nav__item" data-panel="kill-switch" type="button">Kill Switch</button>
           <button class="ops-nav__item" data-panel="iceberg" type="button">Iceberg Exports</button>
           <button class="ops-nav__item" data-panel="graph" type="button">Graph Browser</button>
+          <button class="ops-nav__item" data-panel="coverage" type="button">Coverage Gaps</button>
         </nav>
 
         <div class="sidebar__footer">
@@ -162,6 +163,19 @@
               <button class="btn btn--secondary" type="submit">Search</button>
             </form>
             <div id="graphResult"></div>
+          </section>
+
+          <!-- Coverage Gaps -->
+          <section class="ops-panel" id="panel-coverage" data-panel="coverage" hidden>
+            <div class="ops-panel__head">
+              <h2>Coverage gaps</h2>
+              <button class="btn btn--secondary btn--sm" id="coverageRefreshBtn" type="button">Refresh</button>
+            </div>
+            <p class="field__hint">
+              How often each query mode ends without enough evidence to answer -- mode-level only,
+              a signal for which connector category might close a gap, not an automated action.
+            </p>
+            <div class="ops-table-wrap"><table class="ops-table" id="coverageTable"></table></div>
           </section>
         </div>
       </div>
