@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import hashlib
 import time
-from datetime import datetime
 
 from sqlalchemy import text
 from sqlalchemy.orm import Session
@@ -37,9 +36,7 @@ def _merge_filters(question: str, filters: dict) -> dict:
     merged = dict(filters)
     for key, value in understanding.extract_constraints(question).items():
         merged.setdefault(key, value)
-    if isinstance(merged.get("published_after"), str):
-        merged["published_after"] = datetime.fromisoformat(merged["published_after"])
-    return merged
+    return understanding.coerce_date_filters(merged)
 
 
 def _graph_lookup(question: str) -> list[FusedResult]:
