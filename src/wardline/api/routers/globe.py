@@ -30,12 +30,16 @@ import time
 from datetime import UTC, datetime
 
 import httpx
-from fastapi import APIRouter, HTTPException, Query, Request
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from fastapi.responses import PlainTextResponse
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
+from wardline.api.deps import get_db
 from wardline.common.config import get_settings
 from wardline.common.logging import get_logger
 from wardline.governance.rate_limit import limiter
+from wardline.storage.models.documents import Document
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/v1/globe", tags=["globe"])
@@ -92,6 +96,66 @@ def globe_config() -> dict:
     hard-coded copy in `globe/`, same principle as `GET /v1/billing/plans`
     for the pricing page."""
     return {"layers": {name: _layer_enabled(name) for name in _LAYER_REQUIRES}}
+
+
+# A hard allowlist, not "any connector name the caller asks for": `documents`
+# also holds `internal-only`, engagement-gated ingest from shodan/nmap/
+# spiderfoot. This route is public and unauthenticated like the rest of
+# globe.py -- it must never become a way to read those out without clearing
+# governance.pep.enforce_engagement_scope first. Only the two discrete-event
+# connectors from the Live Globe integration (public license tags, no
+# engagement gate) are eligible for history browsing at all.
+_HISTORY_CONNECTORS = {"usgs_earthquakes", "nasa_firms"}
+_MAX_HISTORY_RESULTS = 2000
+
+
+@router.get("/history")
+@limiter.limit(f"{get_settings().rate_limit_globe_per_minute}/minute")
+def globe_history(
+    request: Request,
+    connector: str = Query(...),
+    start: datetime = Query(...),
+    end: datetime = Query(...),
+    limit: int = Query(default=500, le=_MAX_HISTORY_RESULTS),
+    db: Session = Depends(get_db),
+) -> list[dict]:
+    """Backs the Live Globe's history-comparison view: two date ranges,
+    rendered as two sets of points. Reads `documents` directly (no
+    full-text search needed -- `Document.extra` already carries each
+    connector's structured latitude/longitude) rather than the RAG query
+    pipeline, since this is "show me events in a box," not a cited
+    natural-language answer.
+    """
+    if connector not in _HISTORY_CONNECTORS:
+        raise HTTPException(
+            status_code=400, detail=f"connector must be one of {sorted(_HISTORY_CONNECTORS)}"
+        )
+    if end <= start:
+        raise HTTPException(status_code=400, detail="end must be after start")
+
+    stmt = (
+        select(Document)
+        .where(
+            Document.source_connector == connector,
+            Document.status == "active",
+            Document.published_at >= start,
+            Document.published_at < end,  # half-open, matching retrieval's own published_before convention
+        )
+        .order_by(Document.published_at)
+        .limit(limit)
+    )
+    return [
+        {
+            "doc_id": doc.id,
+            "uri": doc.uri,
+            "title": doc.title,
+            "published_at": doc.published_at.isoformat() if doc.published_at else None,
+            "latitude": doc.extra.get("latitude"),
+            "longitude": doc.extra.get("longitude"),
+            "extra": doc.extra,
+        }
+        for doc in db.execute(stmt).scalars()
+    ]
 
 
 async def _opensky_token(settings) -> str | None:

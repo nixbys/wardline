@@ -5,6 +5,7 @@ import { AircraftLayer } from "./layers/aircraft.js";
 import { SatelliteLayer } from "./layers/satellites.js";
 import { VesselLayer } from "./layers/vessels.js";
 import { TrafficLayer } from "./layers/traffic.js";
+import { HistoryLayer } from "./layers/history.js";
 import { Hud } from "./hud.js";
 import { VoiceSession } from "./voice.js";
 
@@ -60,8 +61,23 @@ const trafficLayer = new TrafficLayer(viewer, {
   onError: () => toast("Traffic lookup failed", "danger"),
 });
 
+const historyLayer = new HistoryLayer(viewer);
+
 const hud = new Hud(document.getElementById("hud"), {
   onLayerToggle: (name, enabled) => setLayerEnabled(name, enabled),
+  onCompareHistory: async ({ connector, periodA, periodB }) => {
+    if (!periodA.start || !periodA.end || !periodB.start || !periodB.end) {
+      hud.setHistoryResult("Pick a start and end date for both periods.", "danger");
+      return;
+    }
+    hud.setHistoryResult("Comparing…");
+    try {
+      const { periodACount, periodBCount } = await historyLayer.compare({ connector, periodA, periodB });
+      hud.setHistoryResult(`Period A: ${periodACount} · Period B: ${periodBCount}`);
+    } catch (err) {
+      hud.setHistoryResult(err.message, "danger");
+    }
+  },
 });
 
 function setLayerEnabled(name, enabled) {

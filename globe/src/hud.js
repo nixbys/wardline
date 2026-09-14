@@ -14,9 +14,10 @@ const ATTRIBUTIONS = [
 ];
 
 export class Hud {
-  constructor(root, { onLayerToggle } = {}) {
+  constructor(root, { onLayerToggle, onCompareHistory } = {}) {
     this.root = root;
     this.onLayerToggle = onLayerToggle || (() => {});
+    this.onCompareHistory = onCompareHistory || (() => {});
     this.statusEl = null;
     this.render();
   }
@@ -26,6 +27,27 @@ export class Hud {
       <h2>Layers</h2>
       <div id="hudLayers"></div>
       <div class="hud__status" id="hudStatus"></div>
+
+      <h2>History comparison</h2>
+      <div class="hud__history">
+        <select class="hud__select" id="historyConnector">
+          <option value="usgs_earthquakes">Earthquakes (USGS)</option>
+          <option value="nasa_firms">Fire detections (NASA FIRMS)</option>
+        </select>
+        <div class="hud__history-period">
+          <span style="color:var(--text-tertiary)">Period A</span>
+          <input class="hud__date" id="historyAStart" type="date" />
+          <input class="hud__date" id="historyAEnd" type="date" />
+        </div>
+        <div class="hud__history-period">
+          <span style="color:var(--text-tertiary)">Period B</span>
+          <input class="hud__date" id="historyBStart" type="date" />
+          <input class="hud__date" id="historyBEnd" type="date" />
+        </div>
+        <button class="pill pill--button" id="historyCompareBtn" type="button">Compare</button>
+        <div class="hud__status" id="historyResult"></div>
+      </div>
+
       <div class="hud__attribution">
         Live data: ${ATTRIBUTIONS.map(([name, url]) => `<a href="${url}" target="_blank" rel="noreferrer">${name}</a>`).join(", ")}.
         Inspired by <a href="https://github.com/bilawalsidhu/gods-eye-view" target="_blank" rel="noreferrer">
@@ -33,6 +55,24 @@ export class Hud {
       </div>
     `;
     this.statusEl = this.root.querySelector("#hudStatus");
+    this.root.querySelector("#historyCompareBtn").addEventListener("click", () => {
+      const connector = this.root.querySelector("#historyConnector").value;
+      const dateOf = (id) => {
+        const value = this.root.querySelector(`#${id}`).value;
+        return value ? new Date(`${value}T00:00:00Z`) : null;
+      };
+      this.onCompareHistory({
+        connector,
+        periodA: { start: dateOf("historyAStart"), end: dateOf("historyAEnd") },
+        periodB: { start: dateOf("historyBStart"), end: dateOf("historyBEnd") },
+      });
+    });
+  }
+
+  setHistoryResult(text, variant = "") {
+    const el = this.root.querySelector("#historyResult");
+    el.textContent = text;
+    el.className = `hud__status ${variant ? `hud__status--${variant}` : ""}`.trim();
   }
 
   /** `layers` is { name: { available: bool, running: bool, reason?: string } }.
