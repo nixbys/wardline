@@ -6,18 +6,23 @@ Tracked (not one of this repo's untracked internal-planning docs -- this is oper
 
 wardline's backend is a FastAPI app with a real dependency footprint (torch via `sentence-transformers`/`faster-whisper`, `spacy`) and a stateful topology (Postgres+pgvector, Neo4j, object storage, a persistent worker process) that doesn't fit Vercel's stateless-function model by default. None of that makes it impossible -- every piece below either already has a config-only path to a managed equivalent, or a small serverless-shaped adapter (`api/routers/cron.py`). It does mean a Vercel deployment needs several external accounts and a couple of settings a docker-compose deployment never touches.
 
-## 1. Bundle size
+## 1. Bundle size -- two required Vercel project environment variables
 
-`pip install torch` on Linux resolves the CUDA-bundled wheel by default (several GB of `nvidia-*` packages) even though Vercel's build has no GPU. `requirements.txt` (used only by Vercel's Python builder, not `docker/Dockerfile.api`) points pip at torch's CPU-only index instead:
+`pip install torch` on Linux resolves the CUDA-bundled wheel by default (several GB of `nvidia-*` packages) even though Vercel's build has no GPU. The obvious-looking fixes for this **do not work against Vercel's real build** -- confirmed directly from an actual build log, not assumed:
+
+- A root `requirements.txt` pointing pip at torch's CPU-only index goes completely unused -- Vercel's Python builder installs straight from `pyproject.toml` via `uv` ("Installing required dependencies from pyproject.toml..." in the build log), and never reads `requirements.txt` at all despite that being what Vercel's own FastAPI docs describe for *local* `vercel dev`.
+- `pyproject.toml`'s `[tool.uv.sources]`/`[[tool.uv.index]]` (uv's own documented mechanism for pinning one package to an alternate index) also doesn't apply here -- confirmed empirically (installed it, checked, torch still resolved its default CUDA build) -- because that mechanism is project-mode-only (`uv sync`/`uv lock`), and Vercel's builder uses `uv pip install`, uv's separate pip-compatible interface, which doesn't read those sections.
+
+**What actually works, verified directly**: two Vercel project environment variables (Project Settings → Environment Variables), which `uv pip install` *does* honor:
 
 ```
---extra-index-url https://download.pytorch.org/whl/cpu
-.
+UV_EXTRA_INDEX_URL=https://download.pytorch.org/whl/cpu
+UV_INDEX_STRATEGY=unsafe-best-match
 ```
 
-Verified directly (not estimated): the full project installs at **2643MB**, zero `nvidia-*` packages. That's over Vercel's *standard* 500MB Python function limit, but comfortably under the 5GB **Large Functions** beta limit.
+With both set, `torch` resolves to `2.14.0+cpu` and the full project installs at **2.2GB total, zero `nvidia-*` packages** (without `UV_INDEX_STRATEGY=unsafe-best-match`, uv's default index strategy stops at the first index where it finds *any* matching version -- PyPI's CUDA-bundled one -- so both variables are needed together; either alone isn't sufficient). That's over Vercel's *standard* 500MB Python function limit, but comfortably under the 5GB **Large Functions** beta limit.
 
-**You need to enable Large Functions once**, in the Vercel dashboard: Project Settings → Environment Variables → add `VERCEL_SUPPORT_LARGE_FUNCTIONS=1`. This works on any plan tier, including Hobby -- no upgrade needed for this part specifically.
+**You also need to enable Large Functions once**: add `VERCEL_SUPPORT_LARGE_FUNCTIONS=1` as a third project environment variable. This works on any plan tier, including Hobby -- no upgrade needed for this part specifically.
 
 ## 2. Background jobs: Cron cadence is a real decision, not a detail
 
