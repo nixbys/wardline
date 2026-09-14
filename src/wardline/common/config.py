@@ -372,6 +372,30 @@ class Settings(BaseSettings):
     otel_console_export: bool = True
     otel_exporter_otlp_endpoint: str | None = None
 
+    # --- Serverless job dispatch (api/routers/cron.py) ---
+    # An alternative to worker/main.py's persistent polling loop + APScheduler,
+    # for deployment targets (e.g. Vercel) that can't run a long-lived process --
+    # see docs/VERCEL_DEPLOYMENT.md. Unset (default) means the cron endpoints
+    # reject every request; nothing here affects worker/main.py, which stays
+    # the primary dispatch mechanism for a normal docker-compose deployment.
+    #
+    # CRON_SECRET is deliberately named to match Vercel's own convention --
+    # when a project env var of exactly this name is set, Vercel automatically
+    # sends `Authorization: Bearer $CRON_SECRET` on every cron-triggered
+    # request, no custom wiring needed on the caller side.
+    cron_secret: str | None = None
+    # How long a job can sit "running" before a cron-triggered dispatch
+    # assumes the invocation that claimed it was killed mid-run (Vercel's
+    # own function timeout, not a crash) and reclaims it -- must safely
+    # exceed both the longest expected single job and one dispatch
+    # invocation's own time budget. See cron.py's own reasoning.
+    cron_stale_job_timeout_seconds: int = 900  # 15 minutes
+    # How long POST /v1/cron/dispatch-jobs keeps claiming+running jobs
+    # before returning on its own, safely under Vercel's own function
+    # timeout (300s on Hobby) so it always gets a chance to return a real
+    # response instead of being killed mid-request.
+    cron_dispatch_budget_seconds: int = 250
+
 
 @lru_cache
 def get_settings() -> Settings:

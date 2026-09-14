@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import os
 import traceback
+from datetime import timedelta
 
 from sqlalchemy import select
 
@@ -19,6 +20,40 @@ from wardline.worker.job_log import log_job_event
 logger = get_logger(__name__)
 
 _WORKER_ID = f"worker-{os.getpid()}"
+
+
+def reap_stale_jobs(older_than_seconds: int) -> int:
+    """Reclaims jobs stuck `"running"` past `older_than_seconds` -- normally
+    a rare, worker-crash-only scenario (this codebase has never had a reaper;
+    a dead worker's claimed job just sat "running" forever, same weakness
+    kafka_queue.py's own docstring already admits). Made routine, not rare,
+    by cron.py's dispatch-jobs endpoint: a job still executing when Vercel
+    kills the invocation for running past its time budget has no other
+    invocation able to reclaim it otherwise, since claim_next_job() only
+    ever selects `status == "pending"`. Marks reclaimed jobs "failed" with a
+    clear cause rather than silently re-queuing them as "pending" -- a job
+    that was killed mid-run left partial side effects (documents partially
+    ingested, etc.), so a plain retry isn't obviously safe; an operator
+    (or the connector's own re-run) is a better call than an automatic
+    unbounded retry loop.
+    """
+    cutoff = utcnow() - timedelta(seconds=older_than_seconds)
+    with sync_session() as db:
+        stmt = select(IngestionJob).where(
+            IngestionJob.status == "running", IngestionJob.locked_at < cutoff
+        )
+        stale = db.execute(stmt).scalars().all()
+        for job in stale:
+            job.status = "failed"
+            job.finished_at = utcnow()
+            job.error = (
+                f"reclaimed: still \"running\" after {older_than_seconds}s "
+                f"(locked_by={job.locked_by!r}, locked_at={job.locked_at}) -- "
+                "the invocation that claimed it likely hit a timeout"
+            )
+            log_job_event(job.id, job.error, level="error")
+        db.flush()
+        return len(stale)
 
 
 def claim_next_job() -> IngestionJob | None:

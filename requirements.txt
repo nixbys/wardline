@@ -11,4 +11,13 @@
 # builds; deliberately not used here; see [tool.vercel] in pyproject.toml
 # for why a Vercel deploy of this project needs more than this one file
 # to actually work.
+#
+# CPU-only torch: on Linux, plain PyPI resolves torch's default (CUDA-
+# bundled) wheel even though Vercel's build has no GPU -- that alone pulls
+# several GB of nvidia-* packages (measured: a 6.6GB total bundle, versus
+# Vercel's function size limits). This index has torch's CPU-only builds
+# instead; pip still resolves everything else from PyPI as normal. Verified
+# directly: with this line, the full project installs at 2643MB total, zero
+# nvidia packages -- see docs/VERCEL_DEPLOYMENT.md.
+--extra-index-url https://download.pytorch.org/whl/cpu
 .

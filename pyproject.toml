@@ -90,11 +90,10 @@ packages = ["src/wardline"]
 # `app = ...`-shaped module it finds, including docker/toolrunner/app.py --
 # a deliberately internal, unauthenticated nmap-execution sidecar (see its
 # own docstring) that must never be the public entrypoint. The real API is
-# api/main.py's `app = create_app()`. See README's "Not yet built" section
-# and docker/Dockerfile.api before assuming a Vercel deploy is otherwise
-# complete -- this repo's real dependency closure (torch via
-# sentence-transformers/faster-whisper, spacy, ...) and its Postgres/Neo4j/
-# MinIO/worker topology don't fit a single stateless serverless function.
+# api/main.py's `app = create_app()`. A Vercel deploy needs more than just
+# this entrypoint fix to actually work end-to-end (managed Postgres/Neo4j,
+# api/routers/cron.py standing in for the persistent worker process, a
+# CPU-only-torch requirements.txt) -- see docs/VERCEL_DEPLOYMENT.md.
 [tool.vercel]
 entrypoint = "src.wardline.api.main:app"
 
