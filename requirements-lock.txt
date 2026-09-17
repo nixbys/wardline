@@ -39,7 +39,7 @@ cryptography==50.0.1
 ctranslate2==4.8.2
 cuda-bindings==13.4.1
 cuda-pathfinder==1.8.1
-cuda-toolkit==13.0.3.0
+cuda-toolkit==13.4.1
 cyclopts==4.25.2
 cymem==2.0.13
 datasketch==2.0.0
