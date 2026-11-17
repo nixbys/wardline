@@ -1,4 +1,4 @@
-"""Self-serve account lifecycle (commercialization roadmap Pillar 1):
+"""Self-serve account lifecycle:
 signup, email verification, login (with optional TOTP MFA + recovery-code
 fallback), logout, password reset, MFA enrollment, and admin-issued
 invites. `api/routers/auth.py` is a thin wrapper around this module,
@@ -355,8 +355,7 @@ def reset_password(
             # No code given, or the code given predates vault escrow /
             # failed to unwrap: mint a fresh DEK. Old history stays
             # encrypted under the now-orphaned key, permanently unreadable
-            # -- crypto-shredded, consistent with Pillar 4's
-            # right-to-erasure framing -- but the account and everything
+            # -- crypto-shredded, the same as a right-to-erasure deletion -- but the account and everything
             # going forward keep working. Every other still-unused
             # recovery code now wraps a DEK nothing can ever derive again,
             # so void them (they're still perfectly good for their other
@@ -429,8 +428,7 @@ def disable_mfa(db: Session, user: User, *, code: str | None, recovery_code: str
     user.mfa_secret = None
     # Recovery codes used to get deleted here (they existed only for MFA
     # recovery). Now that they're also generated independently at signup
-    # as this account's vault-escrow secret (commercialization roadmap
-    # Phase 2), deleting every unused one just because MFA turned off
+    # as this account's vault-escrow secret, deleting every unused one just because MFA turned off
     # would strand that escrow path for no reason — leave them alone.
     db.flush()
 

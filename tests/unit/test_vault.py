@@ -1,5 +1,4 @@
-"""Unit coverage for security/vault.py's crypto primitives (commercialization
-roadmap Phase 2 / Pillar 2). governance/accounts.py's lifecycle integration
+"""Unit coverage for security/vault.py's crypto primitives. governance/accounts.py's lifecycle integration
 (signup provisioning a vault, the login/logout session bridge, recovery-code
 escrow) is covered in test_accounts.py instead — this file is just the
 primitives themselves.
@@ -14,11 +13,9 @@ from sqlalchemy.ext.compiler import compiles
 from sqlalchemy.orm import Session
 from sqlalchemy.types import JSON
 
-from wardline.common.plans import FREE, PRO
-from wardline.governance import billing, orgs
+from wardline.governance import orgs
 from wardline.security import vault
 from wardline.storage.models.base import Base
-from wardline.storage.models.billing import Subscription
 from wardline.storage.models.governance import User
 from wardline.storage.models.orgs import Organization
 
@@ -32,7 +29,7 @@ def _compile_jsonb_as_json_on_sqlite(element, compiler, **kw):  # pragma: no cov
 def db():
     engine = create_engine("sqlite:///:memory:")
     Base.metadata.create_all(
-        engine, tables=[User.__table__, Subscription.__table__, Organization.__table__]
+        engine, tables=[User.__table__, Organization.__table__]
     )
     with Session(engine) as session:
         yield session
@@ -130,20 +127,18 @@ def test_wrap_unwrap_for_session_round_trips():
 # --- should_encrypt_history ----------------------------------------------
 
 
-def test_should_encrypt_history_true_for_a_solo_pro_user(db, user):
-    billing.create_checkout_session(db, user, plan_id=PRO)
+def test_should_encrypt_history_true_for_a_solo_user(db, user):
     assert vault.should_encrypt_history(db, user) is True
 
 
-def test_should_encrypt_history_false_for_a_solo_free_user(db, user):
-    assert billing.current_plan_id(db, user) == FREE
-    assert vault.should_encrypt_history(db, user) is False
-
-
-def test_should_encrypt_history_false_for_an_org_member_even_on_pro(db, user):
+def test_should_encrypt_history_false_for_an_org_member(db, user):
     org = orgs.create_organization(db, owner=user, name="Acme Inc")
     member = User(email="member@example.com", role="viewer", org_id=org.id)
     db.add(member)
     db.flush()
-    billing.create_checkout_session(db, member, plan_id=PRO)
     assert vault.should_encrypt_history(db, member) is False
+
+
+def test_should_encrypt_history_false_when_the_vault_is_off(db, user, monkeypatch):
+    monkeypatch.setattr(vault, "get_settings", lambda: type("S", (), {"vault_enabled": False})())
+    assert vault.should_encrypt_history(db, user) is False

@@ -1,4 +1,4 @@
-"""Self-serve account endpoints (commercialization roadmap Pillar 1):
+"""Self-serve account endpoints:
 signup, email verification, login (+ MFA), logout, password reset, MFA
 enrollment, and invite acceptance. All the actual logic lives in
 `governance/accounts.py` — this router is deliberately thin, matching the

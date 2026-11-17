@@ -33,8 +33,8 @@ from wardline.storage.models.governance import ROLE_ADMIN, AuditEvent, User
 def open_session(
     db: Session, user_id: str | None, question: str, mode: str, *, dek: bytes | None = None
 ) -> str:
-    """`dek`, when given (a Pro solo user's vault key, resolved by the
-    caller via api/deps.get_vault_dek — commercialization roadmap Phase 2),
+    """`dek`, when given (a solo user's vault key, resolved by the
+    caller via api/deps.get_vault_dek),
     stores the question encrypted (`question_enc`) instead of plaintext
     (`question`). `get_session_events`/anything else reading this payload
     checks which key is present rather than assuming one or the other."""
@@ -91,7 +91,7 @@ def build_query_session(events: list[AuditEvent], caller: User, dek: bytes | Non
     (api/routers/session.py's `GET /v1/session/{id}`). Raises
     AccessDeniedError — the router maps this to a 404, not a 403, so a
     non-owner can't tell an encrypted session exists at all — for a
-    session with no events, or an *encrypted* one (a Pro solo user's
+    session with no events, or an *encrypted* one (a solo user's
     private history) the caller doesn't own and isn't an admin. A
     plaintext session (the Team/shared-audit-log model) stays readable by
     any authenticated caller, unchanged from before Phase 2."""

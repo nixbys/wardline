@@ -11,7 +11,7 @@ Wardline is a research platform for lawful open-source intelligence. It answers 
 - An agentic research mode that can compare evidence across two time periods
 - Governance: roles, attribute-based access, an admin kill switch and an append-only audit log enforced by Postgres
 - Engagement-gated connectors for authorized security assessments (Shodan, nmap, SpiderFoot)
-- Self-serve accounts and billing, an admin [Ops Console](docs/guide.md#ops-console) and a public [Live Globe](docs/guide.md#live-globe)
+- Free and open source: self-serve accounts with every feature, an admin [Ops Console](docs/guide.md#ops-console) and a public [Live Globe](docs/guide.md#live-globe)
 
 ## What this is not
 
@@ -70,7 +70,7 @@ curl -X POST http://localhost:8000/v1/query \
 
 - [Using it](docs/guide.md#how-to-use-it): every connector, queries, the audit trail, entity review, admin controls
 - [Adding a source](docs/guide.md#adding-a-new-source) and [authorized pentesting connectors](docs/guide.md#authorized-pentesting-connectors)
-- [Accounts](docs/guide.md#self-serve-accounts), [billing](docs/guide.md#billing) and [governance](docs/guide.md#governance)
+- [Accounts](docs/guide.md#self-serve-accounts), [donations](docs/guide.md#donations) and [governance](docs/guide.md#governance)
 - [Testing](docs/guide.md#testing), [production readiness](docs/guide.md#production-readiness) and [design choices](docs/guide.md#design-choices)
 
 Deployment notes live in [docs/](docs/): post-quantum TLS ([DEPLOYMENT_PQC.md](docs/DEPLOYMENT_PQC.md)) and Vercel ([VERCEL_DEPLOYMENT.md](docs/VERCEL_DEPLOYMENT.md)).

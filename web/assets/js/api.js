@@ -169,48 +169,12 @@
       return request("/v1/auth/accept-invite", { method: "POST", body: { token, password } });
     },
 
-    /** GET /v1/billing/plans — public, no auth required */
-    listPlans() {
-      return request("/v1/billing/plans");
-    },
-
-    /** GET /v1/billing/subscription — the caller's current plan/status */
-    getSubscription() {
-      return request("/v1/billing/subscription");
-    },
-
-    /** POST /v1/billing/checkout — body: { plan_id }; returns { checkout_url } */
-    checkout({ planId }) {
-      return request("/v1/billing/checkout", { method: "POST", body: { plan_id: planId } });
-    },
-
-    /** POST /v1/billing/portal — returns { portal_url } (manage/cancel a subscription) */
-    billingPortal() {
-      return request("/v1/billing/portal", { method: "POST" });
-    },
-
     /** POST /v1/billing/donate — public, no account needed; body: { amount_usd, message? };
      *  returns { checkout_url } */
     donate({ amountUsd, message }) {
       return request("/v1/billing/donate", {
         method: "POST",
         body: { amount_usd: amountUsd, message: message || null },
-      });
-    },
-
-    /** POST /v1/billing/enterprise-inquiry — public, no account needed;
-     *  body: { company, contact_email, contact_name?, seats_estimate?, message? };
-     *  returns { received, lead_id } */
-    enterpriseInquiry({ company, contactEmail, contactName, seatsEstimate, message }) {
-      return request("/v1/billing/enterprise-inquiry", {
-        method: "POST",
-        body: {
-          company,
-          contact_email: contactEmail,
-          contact_name: contactName || null,
-          seats_estimate: seatsEstimate || null,
-          message: message || null,
-        },
       });
     },
 
@@ -386,19 +350,6 @@
       return request(`/v1/admin/graph/entities/${encodeURIComponent(entityId)}/traverse?hops=${hops}`);
     },
 
-    /** GET /v1/admin/billing/enterprise-leads?status= */
-    listEnterpriseLeads({ status } = {}) {
-      const qs = status ? `?status=${encodeURIComponent(status)}` : "";
-      return request(`/v1/admin/billing/enterprise-leads${qs}`);
-    },
-
-    /** POST /v1/admin/billing/enterprise-leads/{id}/status — body: { status } */
-    updateEnterpriseLeadStatus({ leadId, status }) {
-      return request(`/v1/admin/billing/enterprise-leads/${encodeURIComponent(leadId)}/status`, {
-        method: "POST",
-        body: { status },
-      });
-    },
   };
 
   window.WardlineApi = WardlineApi;

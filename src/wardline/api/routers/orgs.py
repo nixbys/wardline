@@ -1,4 +1,4 @@
-"""Org/workspace endpoints (commercialization roadmap Pillar 1). Thin
+"""Org/workspace endpoints. Thin
 wrapper around `governance/orgs.py`, matching this codebase's existing
 router/business-logic split.
 """

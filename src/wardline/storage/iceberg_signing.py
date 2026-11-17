@@ -1,5 +1,4 @@
-"""ML-DSA signing for the Iceberg audit export (commercialization roadmap
-Phase 2 / Pillar 3.3) -- a real post-quantum *integrity* claim, distinct
+"""ML-DSA signing for the Iceberg audit export -- a real post-quantum *integrity* claim, distinct
 from the vault's encryption claim (security/vault.py) and much cheaper to
 add: sign, not encrypt.
 

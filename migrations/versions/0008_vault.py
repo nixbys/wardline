@@ -1,5 +1,4 @@
-"""Add the encrypted conversation-history vault (commercialization roadmap
-Phase 2 / Pillar 2): vault_keys (one row per user with a vault -- their
+"""Add the encrypted conversation-history vault: vault_keys (one row per user with a vault -- their
 data-encryption key, wrapped under a password-derived key-encryption key),
 plus vault-escrow columns on recovery_codes (so an unredeemed MFA recovery
 code can also unwrap the vault) and a session-bridge pair on api_keys (the

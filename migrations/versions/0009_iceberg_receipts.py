@@ -1,5 +1,4 @@
-"""Add iceberg_export_receipts (commercialization roadmap Phase 2 / Pillar
-3.3): a small, ML-DSA-signed receipt per Iceberg audit-log export run --
+"""Add iceberg_export_receipts: a small, ML-DSA-signed receipt per Iceberg audit-log export run --
 snapshot id, row count, time range, a SHA-256 hash over what was exported,
 plus the signature and the exact public key that produced it (denormalized
 per row so a receipt stays independently verifiable even after the signing

@@ -1,6 +1,6 @@
 """Add self-serve account fields (password/MFA on users) and their
 supporting tables: auth_tokens (email-verify/password-reset/invite links)
-and recovery_codes (MFA backup codes). Commercialization roadmap Pillar 1.
+and recovery_codes (MFA backup codes).
 
 Revision ID: 0004
 Revises: 0003

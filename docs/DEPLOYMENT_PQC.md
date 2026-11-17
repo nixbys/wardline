@@ -1,11 +1,10 @@
 # Post-quantum TLS in transit
 
 This is the accurate, buildable version of "quantum encryption" for traffic
-between a browser (or API client) and this deployment — see internal
-planning notes' "quantum encryption" section for why true QKD isn't a real
-option for a product like this, and Pillar 3 for the full picture (this covers 3.1 only; 3.2's vault
-key wrapping and 3.3's audit-export signing are separate, already-shipped
-pieces — see [`security/vault.py`](../src/wardline/security/vault.py) and
+between a browser (or API client) and this deployment. (True quantum key
+distribution needs dedicated fiber hardware, so it isn't an option for a
+web service.) The vault's key wrapping and the audit-export signing are
+separate pieces — see [`security/vault.py`](../src/wardline/security/vault.py) and
 [`storage/iceberg_signing.py`](../src/wardline/storage/iceberg_signing.py)).
 
 **The threat this defends against**: "harvest now, decrypt later" — an

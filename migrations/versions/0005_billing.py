@@ -1,4 +1,4 @@
-"""Add subscriptions table (commercialization roadmap Pillar 5: billing).
+"""Add subscriptions table.
 One row per user, mirroring Stripe's own customer/subscription objects —
 see storage/models/billing.py's module docstring for why this is a local
 cache, not a second source of truth.

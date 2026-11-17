@@ -18,8 +18,8 @@ services:
     # the network on a real deployment host, only from other containers on
     # the compose network (which this binding doesn't affect) and from the
     # host machine itself for local psql/debugging. The host-side port is
-    # parameterized (default unchanged) so scripts/provision_customer.sh can
-    # run more than one stack on one host without a port collision.
+    # parameterized (default unchanged) so more than one stack can run on one
+    # host without a port collision.
     ports:
       - "127.0.0.1:${POSTGRES_HOST_PORT:-5432}:5432"
     healthcheck:

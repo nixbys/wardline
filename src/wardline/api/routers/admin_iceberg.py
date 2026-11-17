@@ -4,8 +4,7 @@ Postgres tables + MinIO for raw bytes only" for time-travel/schema-
 evolution-capable analytics over the audit log. Admin-only: this is an
 operational/analytics action, not something every authorized user needs.
 
-Also exposes the signed export receipts (commercialization roadmap Phase 2
-/ Pillar 3.3) -- each one is independently verifiable
+Also exposes the signed export receipts -- each one is independently verifiable
 (storage/iceberg_signing.verify_receipt) using only the fields returned
 here, without trusting this deployment's *current* signing key.
 """

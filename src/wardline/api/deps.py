@@ -106,8 +106,7 @@ def get_vault_dek(
     authorization: str | None = Header(default=None), db: Session = Depends(get_db)
 ) -> bytes | None:
     """Resolves the current request's vault data-encryption key via the
-    session bridge (governance/accounts.mint_session_key — commercialization
-    roadmap Phase 2), when one exists. None — not an error — for an OIDC
+    session bridge (governance/accounts.mint_session_key), when one exists. None — not an error — for an OIDC
     user (never went through mint_session_key), a long-lived API key (only
     ever session-scoped keys get bridged), a user with no vault, or a
     session that never bridged one. Routes that touch vault content take

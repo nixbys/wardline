@@ -6,8 +6,8 @@
 #
 # --env-file <path>: instead of printing, upsert these lines directly into
 # an existing .env file (replacing a matching KEY= line if one exists,
-# appending otherwise). Used by scripts/provision_customer.sh to fill in a
-# freshly generated per-customer .env non-interactively.
+# appending otherwise), e.g. to fill in a freshly copied .env
+# non-interactively.
 set -euo pipefail
 
 rand() { openssl rand -base64 "$1" | tr -d '\n=+/' | head -c "$2"; }

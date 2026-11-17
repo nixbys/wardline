@@ -1,4 +1,4 @@
-"""TOTP-based multi-factor auth (commercialization roadmap Pillar 1):
+"""TOTP-based multi-factor auth:
 secret generation, provisioning-URI construction for an authenticator app,
 code verification, and recovery-code generation for when the device is
 lost. `governance/accounts.py` is the only caller — this module stays

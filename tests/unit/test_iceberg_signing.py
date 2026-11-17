@@ -1,5 +1,4 @@
-"""Unit coverage for storage/iceberg_signing.py (commercialization roadmap
-Phase 2 / Pillar 3.3). All pure functions -- AuditEvent rows are
+"""Unit coverage for storage/iceberg_signing.py. All pure functions -- AuditEvent rows are
 constructed in memory (no db.add/flush needed, matching test_audit.py's
 convention), and signing config comes from monkeypatching get_settings
 rather than a real deployment secret.

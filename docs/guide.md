@@ -7,7 +7,7 @@ The [README](../README.md) covers what Wardline is and how to set it up. This gu
 - [Authorized pentesting connectors](#authorized-pentesting-connectors)
 - [Live Globe](#live-globe)
 - [Self-serve accounts](#self-serve-accounts)
-- [Billing](#billing)
+- [Donations](#donations)
 - [Governance](#governance)
 - [Ops Console](#ops-console)
 - [Adaptive intelligence (opt-in)](#adaptive-intelligence-opt-in)
@@ -234,37 +234,16 @@ An admin can invite a teammate instead of minting a key on their behalf — `POS
 
 Not yet built: passkeys/WebAuthn (TOTP only for now) and org/workspace seat management.
 
-## Billing
+## Donations
 
-Plans and their limits live in one place, `src/wardline/common/plans.py` — nothing else hard-codes a price or a cap. **The prices shipped there are placeholders**, not a business decision this repo makes for you; change `monthly_price_usd` whenever real numbers exist. `GET /v1/billing/plans` (public, no auth) is what a pricing page reads from, so the page and the enforcement can never drift apart.
+Wardline is free and open source; every feature is available to every account. The only payment flow is an optional one-time donation, which unlocks nothing.
 
-`BILLING_MODE=mock` (the default) never calls Stripe: `POST /v1/billing/checkout` activates the plan immediately and locally, so the whole flow — including the webhook-shaped state transitions — is exercisable in dev/CI with no Stripe account. Set `BILLING_MODE=stripe` + `STRIPE_API_KEY`/`STRIPE_WEBHOOK_SECRET`/`STRIPE_PRICE_ID_{PRO,TEAM}` to go live: create a Product + Price per paid plan in the Stripe dashboard, paste the Price ids into `.env`, and point a Stripe webhook endpoint at `POST /v1/billing/webhook` for the `checkout.session.completed`/`customer.subscription.updated`/`customer.subscription.deleted` events `governance/billing.py` handles.
-
-Enforcement sits in `governance/entitlements.py`, called from `POST /v1/query` before anything runs: a plan that doesn't include `research` mode gets a 403 for it, and `max_sources` is silently capped to the plan's ceiling rather than honoring whatever the caller asked for. `web/pricing.html` and `app.html`'s settings modal (current plan + "Manage billing", which opens Stripe's hosted customer portal) are the UI for this.
-
-```bash
-curl http://localhost:8000/v1/billing/plans   # public
-
-curl -X POST http://localhost:8000/v1/billing/checkout \
-  -H "Authorization: Bearer $KEY" -H "Content-Type: application/json" -d '{"plan_id": "pro"}'
-```
-
-**Donations** (`POST /v1/billing/donate`, public, no account/bearer token needed) are a separate, deliberately unrelated flow: a one-time Stripe Checkout payment (`mode="payment"`, dynamic `price_data`, no pre-created Price object) that records a `Donation` row and grants no plan/entitlement — Wardline stays free to use regardless of whether someone donates. `web/donate.html` is the UI; it uses the same `BILLING_MODE=mock|stripe` convention as everything else in this section.
+`POST /v1/billing/donate` is public (no account needed) and takes an amount and an optional message. With `BILLING_MODE=mock` (the default) the donation is recorded immediately and Stripe is never called. With `BILLING_MODE=stripe`, plus `STRIPE_API_KEY` and `STRIPE_WEBHOOK_SECRET`, it returns a Stripe Checkout URL for a one-time payment, and the `Donation` row is written when Stripe's webhook (`POST /v1/billing/webhook`) confirms it. `web/donate.html` is the page that calls it.
 
 ```bash
 curl -X POST http://localhost:8000/v1/billing/donate \
   -H "Content-Type: application/json" -d '{"amount_usd": 10, "message": "keep it free"}'
 ```
-
-**Enterprise** (`plans.py`: `self_serve_checkout=False`, "dedicated instance / contract") isn't a Stripe Checkout flow at all — `POST /v1/billing/enterprise-inquiry` (public, no account needed) is `pricing.html`'s "Talk to sales" card: it persists the inquiry and, if `SALES_NOTIFICATION_EMAIL` is set, emails it through the same mock/live convention as everything else in this section. An admin/analyst tracks the lead through to a provisioned instance from the Ops Console (`GET`/`POST /v1/admin/billing/enterprise-leads`).
-
-```bash
-curl -X POST http://localhost:8000/v1/billing/enterprise-inquiry \
-  -H "Content-Type: application/json" \
-  -d '{"company": "Acme Inc", "contact_email": "ceo@acme.example", "seats_estimate": 50}'
-```
-
-Not yet built: per-plan rate limiting (the `slowapi` limits are flat, not per plan).
 
 ## Governance
 
@@ -296,7 +275,7 @@ Three mechanisms that let the platform improve from real usage rather than only 
 docker compose -f docker/docker-compose.yml run --rm api python -m pytest tests/unit -v
 ```
 
-245 unit tests cover chunking (offsets, overlap, the oversized-line hard-split path), RRF fusion, entity-resolution scoring/blocking/clustering (plus a real Splink/DuckDB training run for the active-learning path — no Postgres needed for that part), citation verification, quality gates, RBAC/ABAC, engagement target-scope matching and validity-window logic, API-key hashing, agent guardrails, every connector's `parse()`/`discover()` logic, billing (mock-mode checkout/webhooks/donations), and a schema-drift contract test against the report's data models.
+The unit tests cover chunking (offsets, overlap, the oversized-line hard-split path), RRF fusion, entity-resolution scoring/blocking/clustering (plus a real Splink/DuckDB training run for the active-learning path — no Postgres needed for that part), citation verification, quality gates, RBAC/ABAC, engagement target-scope matching and validity-window logic, API-key hashing, agent guardrails, every connector's `parse()`/`discover()` logic, donations (mock mode and the webhook), and a schema-drift contract test against the report's data models.
 
 The rest was checked end to end against real Postgres, Neo4j and MinIO: ingestion from every connector, hybrid retrieval rankings, knowledge-graph facts (e.g. `Chesky FOUNDED Airbnb`) cited in `mode="auto"` answers, a multi-step agent run in `mode="research"`, and the governance flow (auth → RBAC → revocation → kill switch → engagement scoping).
 
@@ -310,12 +289,11 @@ Wardline is a single-node build (see [Design choices](#design-choices)). Everyth
 
 - **Secrets**: `Settings` (`common/config.py`) reads `secrets_dir="/run/secrets"` when that path exists — mount a Docker secret, Kubernetes Secret volume, or Vault-agent-rendered file there (named after the field, e.g. `/run/secrets/api_key_pepper`) and it wins over the plain env var. `scripts/generate_secrets.sh` generates strong values for first-time setup. `docker-compose.yml`'s Postgres/Neo4j/MinIO credentials are now sourced from the same `.env` variables the app itself uses (`POSTGRES_PASSWORD`, `NEO4J_PASSWORD`, `S3_SECRET_KEY`) instead of being independently hardcoded, so there's one place to change a credential, not two that can drift. You still need to actually deploy a secrets manager and rotate the shipped dev defaults — this just means there's a real integration point once you do.
 - **TLS**: a `caddy` service reverse-proxies `api:8000` and terminates TLS, published on `HTTP_PORT`/`HTTPS_PORT` (default 8080/8443 — rootless Docker/Podman can't bind 80/443 without a host capability grant; set both to 80/443 in `.env` on a root-daemon host). Set `DOMAIN=yourhost.example.com` and point DNS at this host — Caddy automatically provisions and renews a real Let's Encrypt certificate, no other config change needed. Without `DOMAIN` set, it serves HTTPS on `localhost` using Caddy's own locally-trusted CA (fine for local testing; browsers/`curl` need `-k` or to trust that CA). For hybrid post-quantum TLS (harvest-now-decrypt-later protection in transit), see [`docs/DEPLOYMENT_PQC.md`](DEPLOYMENT_PQC.md) — a modern CDN/WAF in front gets this for free today, no code change here.
-- **Encrypted conversation vault**: a solo Pro-tier user's query history (`AuditEvent.payload.question`) is encrypted at rest under a per-user key derived from their password (Argon2id) — the server can act on a question in-flight to answer it, but can't later browse stored history from a DB dump or backup. Recovery codes (issued at signup, the same batch used for MFA recovery) double as an escrow secret. See `src/wardline/security/vault.py`; Team/Enterprise's shared, plaintext, org-wide audit log is unaffected — that visibility is the point of that tier, not a gap.
+- **Encrypted conversation vault**: a solo user's query history (`AuditEvent.payload.question`) is encrypted at rest under a per-user key derived from their password (Argon2id) — the server can act on a question in-flight to answer it, but can't later browse stored history from a DB dump or backup. Recovery codes (issued at signup, the same batch used for MFA recovery) double as an escrow secret. See `src/wardline/security/vault.py`. Members of an organization share a plaintext, org-wide audit log instead; that shared visibility is what an organization is for.
 - **Post-quantum audit-export signing**: each periodic Iceberg export of the audit log (below) gets a small ML-DSA-signed receipt — a real post-quantum integrity claim, independently verifiable by a customer/auditor without trusting this deployment's current key. Off by default; run `wardline generate-iceberg-signing-key`, set the seed as a secret, and flip `ICEBERG_EXPORT_SIGNING_ENABLED=true`. See `src/wardline/storage/iceberg_signing.py`.
 - **Enterprise IAM**: set `AUTH_MODE=oidc` (+ `OIDC_ISSUER`, `OIDC_JWKS_URL`, optionally `OIDC_AUDIENCE`/`OIDC_ROLE_CLAIM`) to validate bearer tokens against any real OIDC-compliant IdP (Okta, Auth0, Keycloak, Entra ID) instead of this project's own API-key system — see `api/oidc_auth.py`/`api/deps.py`. A user record is created/kept in sync locally on first sight (for revocation and audit-log foreign keys), with the IdP as the source of truth for role assignment. **Live-tested against a real Keycloak instance** (`tests/integration/test_oidc_live.py`, run by CI on every push): a real signed token from a real IdP is validated end-to-end (signature/issuer/audience against the real JWKS endpoint), plus tampered-signature and wrong-issuer rejection. `docker compose --profile oidc up keycloak` stands up the same IdP locally. Okta/Auth0/Entra ID specifically remain untested (no free-tier account available here), but the code path exercised is identical across any OIDC-compliant IdP.
 - **Dependency pinning**: `requirements-lock.txt` (resolved with `uv pip compile` for the images' Python 3.12, see `scripts/regenerate_lockfile.sh`) pins every transitive dependency to an exact version. `pyproject.toml` keeps floating `>=` bounds for flexibility when adding new dependencies; the lockfile is what real deployments should actually install from for reproducible builds.
 - **Backups**: `scripts/backup.sh`/`scripts/restore.sh` dump Postgres (`pg_dump`, online), Neo4j (`neo4j-admin dump`, brief downtime — Community Edition has no hot-backup path), and MinIO (`mc mirror`) into `backups/<timestamp>/`. **A full stop-and-restore cycle hasn't been tested yet**: run one in a disposable environment before relying on it, since a wrong `neo4j-admin` flag for this image version could lose data. You still need to copy the output off-host — a backup on the same disk isn't a backup.
-- **Per-customer provisioning**: `scripts/provision_customer.sh <slug> <domain> --admin-email <email>` scripts the whole manual setup sequence above into one dedicated stack — a fresh `deployments/<slug>/.env` (seeded from `.env.example`, `DOMAIN`/`APP_BASE_URL` set, secrets generated, a non-colliding block of host ports allocated so more than one customer stack can run on the same host), `docker compose -p wardline-<slug> up -d`, migrations, and the first admin user, activated on the Enterprise plan locally (`wardline.cli create-admin-user --plan enterprise` — no Stripe involved, since Enterprise is contract-billed, not a checkout), whose one-time API key is saved to `deployments/<slug>/admin-api-key.txt` (mode 600 — move it to a real secrets manager and delete the file). `--extra-env KEY=VALUE` (repeatable) sets/overrides any other `.env` field (an LLM key, OIDC settings, Stripe keys, …); `--profile NAME` (repeatable) passes through compose profiles (`oidc`, `opensearch`, `kafka`, `toolrunner`). Still manual: pointing DNS at the host, and deploying `web/`'s static frontend (no compose service serves it). `scripts/deprovision_customer.sh <slug>` tears a stack back down (`docker compose down --volumes`, with a `restore.sh`-style typed confirmation) — back up first if the data must be kept.
 - **Resource limits**: every `docker-compose.yml` service now sets `mem_limit`/`cpus` (api/worker: 2 GiB/2 CPU each, for the ML models loaded at runtime; neo4j: 2 GiB; postgres: 1 GiB; the rest smaller). These are starting points sized for a single small deployment — profile and adjust for your actual traffic/hardware.
 - **Observability**: `/metrics` (Prometheus, via `prometheus-fastapi-instrumentator`) and OpenTelemetry tracing (via `opentelemetry-instrumentation-fastapi`) are both wired into the app now, not just declared as dependencies. Traces print to console by default; set `OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317` to route through the bundled `otel-collector` compose service, and edit `docker/otel-collector-config.yaml` to add a real backend exporter (Honeycomb, Grafana Cloud, Datadog, etc.) — it only logs to its own stdout by default.
 - **Deploying to Vercel instead of docker-compose**: possible, but not a drop-in target — see [`docs/VERCEL_DEPLOYMENT.md`](VERCEL_DEPLOYMENT.md) for the full story (bundle-size fix, `api/routers/cron.py` standing in for the persistent worker process, managed Postgres/Neo4j/object-storage wiring, and the Hobby-vs-Pro Cron cadence tradeoff that directly affects background-job timeliness).

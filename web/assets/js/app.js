@@ -56,8 +56,6 @@
     mfaRecoveryPanel: document.getElementById("mfaRecoveryPanel"),
     mfaRecoveryCodes: document.getElementById("mfaRecoveryCodes"),
 
-    billingPlanLabel: document.getElementById("billingPlanLabel"),
-    billingPortalBtn: document.getElementById("billingPortalBtn"),
 
     orgStatusLabel: document.getElementById("orgStatusLabel"),
     orgNoneState: document.getElementById("orgNoneState"),
@@ -205,41 +203,6 @@
     }
   }
 
-  async function refreshBillingLabel() {
-    els.billingPortalBtn.hidden = false;
-    if (!WardlineApi.isConfigured()) {
-      els.billingPlanLabel.textContent = "Sign in to see your plan.";
-      return;
-    }
-    try {
-      const sub = await WardlineApi.getSubscription();
-      const statusNote = sub.status !== "active" ? ` (${sub.status})` : "";
-      // org_id set means this plan was bought once by the org's owner and
-      // covers every member -- not billed to this person individually.
-      let scopeNote = "";
-      if (sub.org_id) {
-        scopeNote = " — shared with your organization";
-        const [org, me] = await Promise.all([WardlineApi.getMyOrg(), WardlineApi.me()]);
-        // Only the owner can manage it (governance/billing.py enforces
-        // this server-side too) -- hide the button rather than show one
-        // that would just 403 for everyone else.
-        els.billingPortalBtn.hidden = !(org && org.owner_user_id === me.user_id);
-      }
-      els.billingPlanLabel.textContent = `Current plan: ${sub.plan}${statusNote}${scopeNote}`;
-    } catch {
-      els.billingPlanLabel.textContent = "Could not load billing status.";
-    }
-  }
-
-  els.billingPortalBtn.addEventListener("click", async () => {
-    try {
-      const { portal_url: url } = await WardlineApi.billingPortal();
-      window.location.href = url;
-    } catch (err) {
-      toast(err.message, "danger");
-    }
-  });
-
   async function refreshOrgState() {
     els.orgNoneState.hidden = true;
     els.orgOwnerState.hidden = true;
@@ -256,7 +219,7 @@
       }
       const isOwner = org.owner_user_id === me.user_id;
       if (!isOwner) {
-        els.orgStatusLabel.textContent = `Member of ${org.name}. Ask your organization's owner to manage members or billing.`;
+        els.orgStatusLabel.textContent = `Member of ${org.name}. Ask your organization's owner to manage members.`;
         return;
       }
       els.orgStatusLabel.textContent = `You own ${org.name}.`;
@@ -303,7 +266,6 @@
     els.settingsStatus.hidden = true;
     resetMfaPanels();
     refreshMfaState();
-    refreshBillingLabel();
     refreshOrgState();
     openModal(els.settingsModal);
   }
