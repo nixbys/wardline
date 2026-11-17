@@ -181,6 +181,9 @@ def _train_m_probabilities(labeled_pairs: list[tuple[str, str]]) -> list[float] 
     raises) on any failure -- training must never sink a batch pass that
     would otherwise still work with the manual defaults.
     """
+    # A pair with a missing name has nothing to compare; DuckDB 2 no longer
+    # errors on it, it just leaves Splink's starting values untouched.
+    labeled_pairs = [(a, b) for a, b in labeled_pairs if a and b]
     if not labeled_pairs:
         return None
     try:
