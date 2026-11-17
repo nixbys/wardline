@@ -217,10 +217,12 @@ class Settings(BaseSettings):
     )
     kill_switch_enabled_default: bool = False
     rate_limit_query_per_minute: int = 30
+    # Upper bound on QueryRequest.max_sources for every caller.
+    query_max_sources: int = 50
     rate_limit_upload_per_minute: int = 10
     upload_max_bytes: int = 50 * 1024 * 1024  # 50 MiB
 
-    # --- Self-serve accounts (commercialization roadmap Pillar 1) ---
+    # --- Self-serve accounts ---
     # Separate from api_key_pepper on purpose: a leak of one secret
     # shouldn't automatically compromise the other credential class too.
     password_pepper: str = Field(
@@ -235,7 +237,7 @@ class Settings(BaseSettings):
     app_base_url: str = "http://localhost:5173"
     rate_limit_auth_per_minute: int = 10
 
-    # --- Encrypted conversation vault (commercialization roadmap Phase 2 / Pillar 2) ---
+    # --- Encrypted conversation vault ---
     # Separate pepper from password_pepper/api_key_pepper on purpose, same
     # "one leaked secret doesn't compromise every credential class" reasoning.
     vault_enabled: bool = True
@@ -269,35 +271,21 @@ class Settings(BaseSettings):
     smtp_password: str | None = None
     smtp_use_tls: bool = True
 
-    # --- Billing (commercialization roadmap Pillar 5) ---
-    # "mock" (default) never calls Stripe: checkout "completes" immediately
-    # and activates the plan locally, matching this project's existing
-    # mock/live convention (LLM_CLIENT_MODE, EMAIL_MODE) so billing is fully
-    # exercisable in dev/CI with no Stripe account. "stripe" calls the real
-    # API — needs STRIPE_API_KEY and STRIPE_WEBHOOK_SECRET.
+    # --- Donations (Stripe Checkout) ---
+    # "mock" (default) never calls Stripe: a donation is recorded immediately,
+    # matching the project's mock/live convention (LLM_CLIENT_MODE,
+    # EMAIL_MODE). "stripe" calls the real API and needs STRIPE_API_KEY and
+    # STRIPE_WEBHOOK_SECRET.
     billing_mode: str = "mock"  # "mock" | "stripe"
     stripe_api_key: str | None = None
     stripe_webhook_secret: str | None = None
-    # Real Stripe Price object ids, once they exist (Stripe dashboard or
-    # API) — see common/plans.py for the rest of each plan's shape.
-    stripe_price_id_pro: str | None = None
-    stripe_price_id_team: str | None = None
     # Where Stripe Checkout sends the browser back to afterward. Point
     # these at the real web/ deployment's origin, not the API's own.
-    billing_success_url: str = "http://localhost:5173/app.html?billing=success"
-    billing_cancel_url: str = "http://localhost:5173/pricing.html?billing=canceled"
-    # POST /v1/billing/donate is public/unauthenticated (donating never
-    # requires an account) -- same "public + cost-triggering needs a cap"
-    # reasoning as rate_limit_auth_per_minute, whose default this mirrors.
+    billing_success_url: str = "http://localhost:5173/donate.html?donation=thanks"
+    billing_cancel_url: str = "http://localhost:5173/donate.html?donation=canceled"
+    # POST /v1/billing/donate is public and starts a payment, so it gets the
+    # same cap as the auth endpoints.
     rate_limit_donate_per_minute: int = 10
-    # POST /v1/billing/enterprise-inquiry ("Talk to sales" on pricing.html)
-    # is also public/unauthenticated -- same rate-limit reasoning as
-    # donate above. Notification goes through common/email.py's existing
-    # mock/live convention, so it's fully exercisable with no real inbox
-    # configured; leave unset to just persist the lead without emailing
-    # anyone (an admin/analyst still sees it in the Ops Console).
-    sales_notification_email: str | None = None
-    rate_limit_enterprise_inquiry_per_minute: int = 5
 
     # --- Auth mode: bearer API keys (default) or OIDC JWT bearer tokens ---
     # "api_key" is this project's own key system (governance/*, storage/models/governance.py).
@@ -328,8 +316,7 @@ class Settings(BaseSettings):
     iceberg_export_enabled: bool = True
     iceberg_export_interval_seconds: int = 21600  # 6 hours
 
-    # --- Iceberg export signing (commercialization roadmap Phase 2 / Pillar
-    # 3.3): ML-DSA-signs a small receipt over each export run, a real
+    # --- Iceberg export signing: ML-DSA-signs a small receipt over each export run, a real
     # post-quantum *integrity* claim -- distinct from, and much cheaper than,
     # an encryption claim. Off by default: needs a keypair generated first
     # (`wardline generate-iceberg-signing-key`) before there's a seed to set.

@@ -1,7 +1,7 @@
 """Unit coverage for api/routers/cron.py -- the serverless-friendly stand-in
 for worker/main.py's persistent loop (see that router's own docstring).
-Route functions are called directly, matching test_admin_graph.py/
-test_admin_billing.py's convention; the module-level lazy `from
+Route functions are called directly, matching test_admin_graph.py's
+convention; the module-level lazy `from
 wardline.worker.jobs import ...`-style imports inside each route are
 patched at their origin module (wardline.worker.jobs, etc.), which a fresh
 `from X import Y` picks up at call time either way.

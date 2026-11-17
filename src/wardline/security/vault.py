@@ -1,14 +1,12 @@
-"""Encrypted conversation-history vault primitives (commercialization
-roadmap Phase 2 / Pillar 2): derive/wrap/unwrap a per-user data-encryption
+"""Encrypted conversation-history vault primitives: derive/wrap/unwrap a per-user data-encryption
 key (DEK), and encrypt/decrypt individual text fields with it.
 
-Threat model, precisely: this protects a Pro-tier solo user's stored
+Threat model, precisely: this protects a solo user's stored
 conversation history from LATER, offline browsing -- a DB dump, a backup,
 an insider with only database access -- not from the live, currently
 authenticated request that's already answering the user's question (the
 plaintext question necessarily passes through this process in-flight, same
-as it would for Lumo or any other RAG product; see the roadmap's Pillar 2
-section for why that's unavoidable). "Session bridge" functions here
+as it would for any other RAG product; that's unavoidable). "Session bridge" functions here
 (governance/accounts.py's login/logout) bound that live-process exposure to
 "an active, unrevoked session," not indefinitely.
 
@@ -34,7 +32,6 @@ from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from sqlalchemy.orm import Session
 
 from wardline.common.config import get_settings
-from wardline.common.plans import PRO
 from wardline.storage.models.governance import User
 
 _DEK_LEN = 32  # AES-256
@@ -135,13 +132,7 @@ def unwrap_for_session(nonce: bytes, ciphertext: bytes, *, aad: str) -> bytes:
 
 
 def should_encrypt_history(db: Session, user: User) -> bool:
-    """Solo Pro accounts only, matching the roadmap's Pillar 5 tier table
-    literally: "encrypted private history" is listed under Pro, while
-    Team is "shared corpus + shared audit log *within the org*" -- org
-    membership means shared/plaintext audit visibility is the point
-    being paid for, not a bug to work around here."""
-    if not get_settings().vault_enabled or user.org_id is not None:
-        return False
-    from wardline.governance.billing import current_plan_id
-
-    return current_plan_id(db, user) == PRO
+    """Every solo account's history is encrypted when the vault is on. An
+    org member's history stays readable to the org, since a shared audit
+    log within the org is what an org is for."""
+    return bool(get_settings().vault_enabled and user.org_id is None)

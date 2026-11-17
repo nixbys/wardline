@@ -33,7 +33,7 @@ class User(Base, TimestampMixin):
     role: Mapped[str] = mapped_column(String(16), default=ROLE_VIEWER)
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    # --- Self-serve accounts (commercialization roadmap Pillar 1) ---
+    # --- Self-serve accounts ---
     # All nullable: an admin-minted (CLI) or OIDC-authenticated user has
     # neither a local password nor local MFA — an admin or an external IdP
     # asserts their identity instead, not this table.
@@ -42,7 +42,7 @@ class User(Base, TimestampMixin):
     mfa_secret: Mapped[str | None] = mapped_column(String(64), nullable=True)
     mfa_enabled: Mapped[bool] = mapped_column(Boolean, default=False)
 
-    # --- Org/workspace membership (commercialization roadmap Pillar 1) ---
+    # --- Org/workspace membership ---
     # Nullable: a solo signup or an admin-minted CLI/OIDC user belongs to no
     # org until one is created (storage/models/orgs.py) and they join it.
     org_id: Mapped[str | None] = mapped_column(
@@ -65,7 +65,7 @@ class ApiKey(Base, TimestampMixin):
     revoked: Mapped[bool] = mapped_column(Boolean, default=False)
     last_used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # --- Encrypted conversation vault (commercialization roadmap Pillar 2) ---
+    # --- Encrypted conversation vault ---
     # The vault DEK, re-wrapped under settings.vault_session_secret for this
     # session's lifetime (security/vault.py) -- the "session bridge" that lets
     # a request decrypt/encrypt without the plaintext password, which only
@@ -112,7 +112,7 @@ class RecoveryCode(Base, TimestampMixin):
     code_hash: Mapped[str] = mapped_column(String(64), nullable=False)
     used_at: Mapped[datetime | None] = mapped_column(DateTime(timezone=True), nullable=True)
 
-    # --- Encrypted conversation vault escrow (commercialization roadmap Pillar 2) ---
+    # --- Encrypted conversation vault escrow ---
     # Null for a user with no vault (Free tier, org member -- see
     # security/vault.should_encrypt_history) or a code issued before this
     # existed. Populated whenever a live vault DEK is available at issuance
@@ -127,7 +127,7 @@ class RecoveryCode(Base, TimestampMixin):
 
 class VaultKey(Base, TimestampMixin):
     """One row per user with an encrypted conversation-history vault
-    (commercialization roadmap Pillar 2, security/vault.py). Holds the
+    (security/vault.py). Holds the
     user's data-encryption key (DEK), wrapped under a key derived from
     their password -- never the DEK itself in the clear. `kdf_salt` is a
     dedicated, deterministic-KDF salt (unlike password_hash's own argon2

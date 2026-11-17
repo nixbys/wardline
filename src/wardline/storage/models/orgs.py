@@ -1,9 +1,6 @@
-"""Org/workspace plane (commercialization roadmap Pillar 1: "one org,
-several seats" as the unit customers actually get billed for). Deliberately
-narrow for now: this table is the grouping entity invites need, no more.
-`Subscription` stays keyed to `user_id` (see storage/models/billing.py) --
-org-scoped/seat-counted billing is real follow-on work once this entity
-exists to hang it off of, not bundled in here.
+"""Org/workspace plane: the grouping entity team invites and the shared
+org audit log hang off. Deliberately narrow: this table is that grouping,
+no more.
 """
 
 from __future__ import annotations

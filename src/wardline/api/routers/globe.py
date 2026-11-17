@@ -14,7 +14,7 @@ through the normal connector pipeline.
 
 Deliberately public (no `get_current_user`, no RBAC/engagement check):
 this isn't a target-lookup connector like `shodan`/`nmap` — it's read-only
-public telemetry, the same trust tier as `index.html`/`pricing.html`. It
+public telemetry, the same trust tier as `index.html`. It
 still goes through the same `slowapi` limiter as everything else, because
 "public and unauthenticated" plus "proxies a rate/cost-limited third-party
 API" is exactly the combination that needs a cap — otherwise many browser
@@ -93,8 +93,7 @@ def _layer_enabled(name: str) -> bool:
 @router.get("/config")
 def globe_config() -> dict:
     """What the frontend renders its layer toggles from -- never a
-    hard-coded copy in `globe/`, same principle as `GET /v1/billing/plans`
-    for the pricing page."""
+    hard-coded copy in `globe/`."""
     return {"layers": {name: _layer_enabled(name) for name in _LAYER_REQUIRES}}
 
 

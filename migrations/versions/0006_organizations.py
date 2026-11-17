@@ -1,5 +1,4 @@
-"""Add organizations table and users.org_id (commercialization roadmap
-Pillar 1: the "one org, several seats" grouping entity invites need).
+"""Add organizations table and users.org_id.
 Deliberately narrow: subscriptions stay keyed to user_id unchanged --
 org-scoped billing is separate follow-on work.
 

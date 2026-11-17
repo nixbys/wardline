@@ -204,7 +204,7 @@ def test_logout_revokes_only_the_session_key_used(db):
     assert permanent_row.revoked is False
 
 
-# --- vault provisioning + session bridge (commercialization roadmap Phase 2) --
+# --- vault provisioning + session bridge --
 
 
 def test_signup_provisions_a_vault_and_wraps_it_into_every_recovery_code(db):
@@ -477,8 +477,7 @@ def test_disable_mfa_requires_a_valid_code_or_recovery_code(db):
 
 
 def test_disable_mfa_via_recovery_code_leaves_other_unused_codes_intact(db):
-    """Recovery codes are no longer MFA-exclusive (commercialization
-    roadmap Phase 2) -- they're also this account's vault-escrow secret,
+    """Recovery codes are no longer MFA-exclusive -- they're also this account's vault-escrow secret,
     generated independently at signup. Disabling MFA used to delete every
     unused code; now it must only consume the one actually redeemed."""
     user, signup_codes = accounts.signup(

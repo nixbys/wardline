@@ -1,7 +1,7 @@
 /*
  * Support Wardline: POST /v1/billing/donate is public (no account needed),
- * so this never checks WardlineApi.isConfigured() the way pricing.js's
- * subscribe button does -- only the base URL needs to be reachable.
+ * so this never checks WardlineApi.isConfigured() -- only the base URL needs
+ * to be reachable.
  */
 (function () {
   const amountGrid = document.getElementById("amountGrid");

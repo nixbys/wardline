@@ -1,5 +1,4 @@
-"""Post-quantum integrity for the Iceberg audit export (commercialization
-roadmap Phase 2 / Pillar 3.3): each export run gets a small, ML-DSA-signed
+"""Post-quantum integrity for the Iceberg audit export: each export run gets a small, ML-DSA-signed
 receipt over what was actually exported, independent of Iceberg's own
 Parquet+manifest files (which aren't a natural thing to sign directly --
 see storage/iceberg_signing.py for why a receipt exists as its own record

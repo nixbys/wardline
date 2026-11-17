@@ -2,9 +2,21 @@
 
 All notable changes to this project are documented here. Format loosely follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/); this project doesn't yet cut tagged
-releases, so entries are grouped by work session instead of version number.
+releases, so entries are grouped by date instead of version number.
 
 ## [Unreleased]
+
+### Changed
+- Wardline is free and open source. Paid plans are gone: every account gets every query mode,
+  one flat query rate limit (`RATE_LIMIT_QUERY_PER_MINUTE`) and one source cap
+  (`QUERY_MAX_SOURCES`, default 50). Removed Stripe subscriptions, `common/plans.py`,
+  `governance/entitlements.py`, the enterprise sales inquiry and its Ops Console panel,
+  `pricing.html`, `scripts/{provision,deprovision}_customer.sh` and `create-admin-user --plan`.
+  Migration 0014 drops the `subscriptions` and `enterprise_leads` tables.
+- One-time donations stay (`POST /v1/billing/donate`, `web/donate.html`); their code now lives in
+  `governance/donations.py`.
+- The encrypted conversation vault covers every solo account, not just paid ones.
+- OIDC token validation uses PyJWT instead of the unmaintained python-jose.
 
 ### Added
 - Open-source contribution scaffolding: `LICENSE` (Apache-2.0, plus `license`/`classifiers` in

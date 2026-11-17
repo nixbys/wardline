@@ -1,4 +1,4 @@
-"""Add subscriptions.org_id (commercialization roadmap Pillar 5: a per-seat
+"""Add subscriptions.org_id (a per-seat
 plan bought once by an org's owner covers every member of that org).
 Nullable and unique when set -- an org has at most one subscription;
 existing per-user subscriptions are untouched (org_id stays NULL for them).
