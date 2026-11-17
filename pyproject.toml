@@ -56,6 +56,7 @@ dependencies = [
   "splink>=4.0,<5",
   "opensearch-py>=2.7",
   "faster-whisper>=1.0",
+  "av<19",  # faster-whisper 1.2.1 passes av.open(metadata_errors=...), removed in PyAV 19
   "confluent-kafka>=2.5",
   "prefect>=3.0",
   "pyiceberg>=0.7",
