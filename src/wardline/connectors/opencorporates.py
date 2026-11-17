@@ -1,9 +1,9 @@
 """OpenCorporates connector — company registry data outside SEC EDGAR's US-
 public-filer scope (private companies, non-US jurisdictions, officers).
 
-OpenCorporates now requires an API token for every endpoint, including
-search (verified live: even /v0.4/jurisdictions 401s without one) — this
-connector could not be live-verified this session. Set
+OpenCorporates requires an API token for every endpoint, including search
+(even /v0.4/jurisdictions returns 401 without one), so this connector has
+only been tested against recorded responses. Set
 OPENCORPORATES_API_TOKEN before running it; see
 https://opencorporates.com/api_accounts/new for the free non-commercial tier.
 
