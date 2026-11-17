@@ -1,9 +1,8 @@
 #!/usr/bin/env bash
-# Stands up a dedicated docker-compose stack for one Path A customer
-# (per internal planning notes' "every customer gets their own deployment"
-# model) -- the scripted counterpart to the manual `cp .env.example .env;
+# Stands up a dedicated docker-compose stack for one customer (every
+# customer gets their own deployment) -- the scripted counterpart to the manual `cp .env.example .env;
 # scripts/generate_secrets.sh; docker compose up -d; ...` sequence in
-# README's Setup section. This is the Enterprise plan's fulfillment path
+# the README's Setup section. This is the Enterprise plan's fulfillment path
 # (plans.py: Enterprise is "dedicated instance / contract", not self-serve
 # checkout) -- the admin user this script creates is activated on that
 # plan locally (see the create-admin-user --plan call below) so they

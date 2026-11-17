@@ -1,6 +1,5 @@
 """Unit coverage for query/understanding.py -- the regex-heuristic date
-constraint extraction that backs Phase 1/2 of temporal-comparison research
-questions (tracked internally). Every `published_before` here is
+constraint extraction behind temporal-comparison research questions. Every `published_before` here is
 exclusive -- see retrieval/lexical.py's matching half-open-range comment.
 """
 

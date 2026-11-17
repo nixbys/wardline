@@ -50,10 +50,10 @@ a fix has shipped and we've agreed on disclosure — see below.
   [The legal boundary](README.md#the-legal-boundary).
 - Findings that require an attacker to already hold `admin` credentials or
   host-level access to the deployment (out of this project's threat model —
-  see [Production readiness](README.md#production-readiness) for the
+  see [Production readiness](docs/guide.md#production-readiness) for the
   secrets/TLS/IAM posture that's the operator's responsibility).
 - Missing rate limits on non-security-sensitive endpoints (a known product
-  gap already tracked internally, not a vulnerability).
+  gap, not a vulnerability).
 - Anything in `.venv/`, generated caches, or other non-shipped local files.
 
 ## Supported versions

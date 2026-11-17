@@ -31,7 +31,7 @@ def create_admin_user(
         help=(
             "Activate a local Subscription at this plan for the new admin "
             "(no Stripe involved -- for scripts/provision_customer.sh's dedicated-"
-            "instance customers, whose whole stack is their own: a Path A "
+            "instance customers, whose whole stack is their own: an "
             "Enterprise customer's own admin should not be capped at Free-tier "
             "entitlements inside their own instance). Omit to leave the user on "
             "the implicit free plan, unchanged from before this option existed."
