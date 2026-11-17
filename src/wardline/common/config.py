@@ -178,8 +178,7 @@ class Settings(BaseSettings):
     # the optional `spiderfoot` compose profile) -- a plain external
     # dependency, not something this connector assumes it owns. If another
     # cooperating deployment (e.g. chiron) already runs one, point this at
-    # that instance instead of starting a second one -- per internal
-    # planning notes on avoiding duplicate infrastructure. Left unset,
+    # that instance instead of starting a second one. Left unset,
     # spiderfoot raises rather than silently no-op-ing, same as toolrunner_url above.
     spiderfoot_url: str | None = None
     spiderfoot_username: str | None = None

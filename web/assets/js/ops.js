@@ -1,7 +1,6 @@
 /*
  * Ops Console: eight admin/analyst-only panels, each a thin wrapper over an
- * existing (or, for jobs-list/log/graph, newly-added) admin API endpoint --
- * per internal planning's Ops Console phase. No section fabricates
+ * admin API endpoint. No section fabricates
  * data; every render call maps 1:1 to a WardlineApi method.
  */
 (function () {

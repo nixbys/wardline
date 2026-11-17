@@ -13,8 +13,8 @@ renders in-app instead — see `globe/README.md`'s Attribution section and
 `globe/` is an original build (no code copied) inspired by
 [bilawalsidhu/gods-eye-view](https://github.com/bilawalsidhu/gods-eye-view),
 credited in-app via the Live Globe HUD's attribution line. A full-fidelity
-integration — consuming that project's actual code via a maintained fork
-rather than reimplementing it — is planned per internal notes.
+integration would consume that project's actual code via a maintained fork
+rather than reimplementing it.
 The fork itself, once it carries real commits, will retain the upstream
 project's own MIT `LICENSE` file in full, per that license's terms:
 
