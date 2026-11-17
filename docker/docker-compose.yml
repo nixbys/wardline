@@ -187,7 +187,7 @@ services:
   # This is also how tests/integration/test_oidc_live.py exercises the real
   # thing in CI (see .github/workflows/ci.yml).
   keycloak:
-    image: quay.io/keycloak/keycloak:26.7.1
+    image: quay.io/keycloak/keycloak:26.8.2
     profiles: ["oidc"]
     restart: unless-stopped
     command: ["start-dev", "--http-port=8080"]
