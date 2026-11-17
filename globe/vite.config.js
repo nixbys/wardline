@@ -13,4 +13,9 @@ export default defineConfig({
   build: {
     outDir: "dist",
   },
+  // satellite.js 7's WebAssembly build starts workers that use top-level await,
+  // which only ES-module workers support.
+  worker: {
+    format: "es",
+  },
 });

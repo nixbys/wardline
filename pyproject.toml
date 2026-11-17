@@ -47,9 +47,8 @@ dependencies = [
   "opentelemetry-sdk>=1.28",
   "opentelemetry-instrumentation-fastapi>=0.49b0",
   "opentelemetry-exporter-otlp-proto-grpc>=1.28",
-  "python-jose[cryptography]>=3.3",
-  "cryptography>=44",  # security/vault.py's AESGCM/HKDF -- direct dependency now that it's
-                        # used outside python-jose's own OIDC-JWT-validation code path
+  "PyJWT[crypto]>=2.10",  # api/oidc_auth.py: OIDC token validation against the JWKS
+  "cryptography>=44",  # security/vault.py's AESGCM/HKDF
   "structlog>=24.4",
   "typer>=0.13",
   "apscheduler>=3.10",

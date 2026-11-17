@@ -124,15 +124,9 @@ jobs:
         # Static analysis of src/ only -- no need to install the package.
         run: pip install bandit==1.9.4 && bandit -r src
       - name: pip-audit (dependency vulnerabilities)
-        # ecdsa's only known vuln (PYSEC-2026-1325) is a timing attack on
-        # ecdsa.SigningKey.sign_digest() -- the advisory itself says
-        # verification is unaffected, and this codebase only ever verifies
-        # externally-issued JWTs via jose.jwt.decode (src/wardline/api/oidc_auth.py),
-        # never signs or generates ECDSA keys. Upstream has no planned fix
-        # (side-channel attacks are explicitly out of scope for the project).
         run: |
           pip install pip-audit==2.10.1
-          pip-audit -r requirements-lock.txt --ignore-vuln PYSEC-2026-1325
+          pip-audit -r requirements-lock.txt
       - name: Gitleaks (secret scanning)
         # The CLI directly, not gitleaks/gitleaks-action, to avoid that
         # wrapper's org-licensing terms -- the underlying tool is MIT
