@@ -19,8 +19,7 @@ from __future__ import annotations
 import time
 
 import httpx
-from jose import jwt
-from jose.exceptions import JOSEError
+import jwt
 
 from wardline.common.config import Settings
 from wardline.storage.models.governance import ROLE_VIEWER, ROLES
@@ -78,16 +77,20 @@ def validate_token(token: str, settings: Settings) -> tuple[str, str, str | None
             "AUTH_MODE=oidc but oidc_issuer/oidc_jwks_url aren't configured"
         )
     try:
-        jwks = _get_jwks(settings.oidc_jwks_url)
+        jwks = jwt.PyJWKSet.from_dict(_get_jwks(settings.oidc_jwks_url))
+        kid = jwt.get_unverified_header(token).get("kid")
+        keys = [k for k in jwks.keys if kid is None or k.key_id == kid]
+        if not keys:
+            raise OidcAuthError(f"no JWKS key matches the token's key id {kid!r}")
         claims = jwt.decode(
             token,
-            jwks,
+            keys[0],
             algorithms=["RS256", "ES256"],
             issuer=settings.oidc_issuer,
             audience=settings.oidc_audience,
             options={"verify_aud": settings.oidc_audience is not None},
         )
-    except JOSEError as exc:
+    except jwt.PyJWTError as exc:
         raise OidcAuthError(f"invalid token: {exc}") from exc
     except httpx.HTTPError as exc:
         raise OidcAuthError(f"could not fetch JWKS: {exc}") from exc

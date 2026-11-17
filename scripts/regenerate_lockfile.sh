@@ -1,12 +1,13 @@
 #!/usr/bin/env bash
-# Regenerates requirements-lock.txt from the built api image (which has every
-# dependency, including transitive ones, actually installed and resolved).
+# Regenerates requirements-lock.txt: every dependency of the package and its
+# dev extra, resolved for the Docker images' Python (3.12, x86-64 Linux).
 # Run this after changing pyproject.toml's dependencies, then commit the
-# result.
+# result. Needs uv (https://docs.astral.sh/uv/); nothing gets installed.
 set -euo pipefail
+cd "$(dirname "$0")/.."
 
-docker compose -f docker/docker-compose.yml build api
-docker compose -f docker/docker-compose.yml run --rm --no-deps --entrypoint pip api freeze \
-  | grep -v '^-e ' > requirements-lock.txt
+uv pip compile pyproject.toml --extra dev \
+  --python-version 3.12 --python-platform x86_64-manylinux_2_28 \
+  --no-header --no-annotate --quiet -o requirements-lock.txt
 
 echo "Wrote requirements-lock.txt ($(wc -l < requirements-lock.txt) packages)."
