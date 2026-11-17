@@ -1,20 +1,48 @@
+# Weekly updates, grouped so each ecosystem's bumps arrive as one PR
+# (security updates as a second one) instead of one PR per package.
 version: 2
 updates:
-  # pyproject.toml — the sole Python dependency manifest.
+  # pyproject.toml and requirements-lock.txt
   - package-ecosystem: "pip"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      pip:
+        applies-to: version-updates
+        patterns: ["*"]
+      pip-security:
+        applies-to: security-updates
+        patterns: ["*"]
 
-  # docker/Dockerfile.api and docker/Dockerfile.worker both live here;
-  # Dependabot scans every Dockerfile it finds in the given directory.
+  # globe/ (the Cesium front end)
+  - package-ecosystem: "npm"
+    directory: "/globe"
+    schedule:
+      interval: "weekly"
+    groups:
+      npm:
+        applies-to: version-updates
+        patterns: ["*"]
+      npm-security:
+        applies-to: security-updates
+        patterns: ["*"]
+
+  # docker/Dockerfile.api and docker/Dockerfile.worker
   - package-ecosystem: "docker"
     directory: "/docker"
     schedule:
       interval: "weekly"
+    ignore:
+      # pyproject.toml pins requires-python to 3.12; move both together.
+      - dependency-name: "python"
+        versions: [">=3.13"]
 
-  # Version pins in .github/workflows/*.yml (actions/checkout, etc.)
+  # Actions used in .github/workflows
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        patterns: ["*"]
