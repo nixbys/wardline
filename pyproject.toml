@@ -53,12 +53,12 @@ dependencies = [
   "typer>=0.13",
   "apscheduler>=3.10",
   "boto3>=1.35",
-  "splink>=4.0,<5",
+  "splink>=5.0.0,<6",
   "opensearch-py>=2.7",
   "faster-whisper>=1.0",
-  "av<19",  # faster-whisper 1.2.1 passes av.open(metadata_errors=...), removed in PyAV 19
+  "av<20",  # faster-whisper 1.2.1 passes av.open(metadata_errors=...), removed in PyAV 19
   "confluent-kafka>=2.5",
-  "prefect>=3.0",
+  "prefect>=3.9.3",
   "pyiceberg>=0.7",
   "pyarrow>=17.0",
   "python-multipart>=0.0.17",
@@ -66,7 +66,7 @@ dependencies = [
   "pyotp>=2.10.0",
   "stripe>=11.1",
   "datasketch>=1.6",
-  "websockets>=13.1",  # api/routers/globe.py's short-lived AISStream collector -- the
+  "websockets>=17.4",  # api/routers/globe.py's short-lived AISStream collector -- the
                         # AISStream API is WebSocket-only, no REST equivalent exists
 ]
 
@@ -80,7 +80,7 @@ dev = [
   "respx>=0.22",
   "testcontainers[postgres]>=4.9",
   "moto[textract]>=5.0",
-  "ruff==0.16.3",
+  "ruff==0.17.5",
 ]
 
 [tool.hatch.build.targets.wheel]
