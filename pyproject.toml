@@ -15,9 +15,9 @@ classifiers = [
   "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-  "fastapi>=0.141.1",
+  "fastapi>=0.165.0",
   "uvicorn[standard]>=0.32",
-  "pydantic>=2.9",
+  "pydantic>=2.14.4",
   "pydantic-settings>=2.6",
   "sqlalchemy>=2.0.36",
   "asyncpg>=0.30",
@@ -28,7 +28,7 @@ dependencies = [
   "httpx>=0.27",
   "tenacity>=9.0",
   "trafilatura>=1.12",
-  "pypdf>=5.1",
+  "pypdf>=7.1.1",
   "defusedxml>=0.7.1",
   "pdf2image>=1.17",
   "pytesseract>=0.3.13",
@@ -41,7 +41,7 @@ dependencies = [
   "networkx>=3.4",
   "sentence-transformers>=3.3",
   "tiktoken>=0.8",
-  "anthropic>=0.40",
+  "anthropic>=2.12.0",
   "slowapi>=0.1.9",
   "prometheus-fastapi-instrumentator>=7.0",
   "opentelemetry-sdk>=1.28",
@@ -50,23 +50,23 @@ dependencies = [
   "PyJWT[crypto]>=2.10",  # api/oidc_auth.py: OIDC token validation against the JWKS
   "cryptography>=44",  # security/vault.py's AESGCM/HKDF
   "structlog>=24.4",
-  "typer>=0.13",
+  "typer>=0.29.2",
   "apscheduler>=3.10",
-  "boto3>=1.35",
-  "splink>=4.0,<5",
+  "boto3>=1.44.9",
+  "splink>=5.0.0,<6",
   "opensearch-py>=2.7",
   "faster-whisper>=1.0",
-  "av<19",  # faster-whisper 1.2.1 passes av.open(metadata_errors=...), removed in PyAV 19
-  "confluent-kafka>=2.5",
-  "prefect>=3.0",
+  "av<20",  # faster-whisper 1.2.1 passes av.open(metadata_errors=...), removed in PyAV 19
+  "confluent-kafka>=2.16.2",
+  "prefect>=3.9.4",
   "pyiceberg>=0.7",
   "pyarrow>=17.0",
   "python-multipart>=0.0.17",
   "argon2-cffi>=23.1",
-  "pyotp>=2.10.0",
-  "stripe>=11.1",
+  "pyotp>=2.12.1",
+  "stripe>=17.1.0",
   "datasketch>=1.6",
-  "websockets>=13.1",  # api/routers/globe.py's short-lived AISStream collector -- the
+  "websockets>=17.4",  # api/routers/globe.py's short-lived AISStream collector -- the
                         # AISStream API is WebSocket-only, no REST equivalent exists
 ]
 
@@ -79,8 +79,8 @@ dev = [
   "pytest-asyncio>=0.24",
   "respx>=0.22",
   "testcontainers[postgres]>=4.9",
-  "moto[textract]>=5.0",
-  "ruff==0.16.3",
+  "moto[textract]>=5.2.6",
+  "ruff==0.17.6",
 ]
 
 [tool.hatch.build.targets.wheel]
